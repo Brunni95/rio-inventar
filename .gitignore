@@ -1,0 +1,69 @@
+# .gitignore für das RIO-Inventar Projekt
+
+# # # # # # # # # # # # # # # # # # # # # #
+# Allgemeine Ausschlüsse
+# # # # # # # # # # # # # # # # # # # # # #
+
+# Log-Dateien
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Betriebssystem-spezifische Dateien
+.DS_Store
+Thumbs.db
+
+# # # # # # # # # # # # # # # # # # # # # #
+# IDE-spezifische Konfigurationen
+# # # # # # # # # # # # # # # # # # # # # #
+
+# JetBrains IDEs (IntelliJ, PyCharm, WebStorm)
+.idea/
+
+# VS Code
+.vscode/
+
+# # # # # # # # # # # # # # # # # # # # # #
+# Backend: Python / FastAPI
+# # # # # # # # # # # # # # # # # # # # # #
+
+# Python Bytecode und Cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtuelle Umgebungen (falls lokal eine erstellt wird)
+venv/
+env/
+.venv/
+
+# Sensible Konfigurationsdateien
+# WICHTIG: Die .env Datei sollte niemals im Git eingecheckt werden!
+.env
+.env.*
+
+# # # # # # # # # # # # # # # # # # # # # #
+# Frontend: Node.js / Vue.js
+# # # # # # # # # # # # # # # # # # # # # #
+
+# Node.js Abhängigkeiten
+# Dieser Ordner kann riesig sein und wird bei `npm install` neu erstellt.
+node_modules/
+
+# Build-Artefakte
+# Der `dist` Ordner enthält den kompilierten Code für die Produktion.
+dist/
+dist-ssr/
+.output/
+
+# Lokale Konfigurationsdateien
+.env.local
+.env.*.local
+
+# # # # # # # # # # # # # # # # # # # # # #
+# Docker
+# # # # # # # # # # # # # # # # # # # # # #
+
+# Lokale Überschreibungen für Docker Compose, die nicht für alle gelten sollen.
+docker-compose.override.yml
