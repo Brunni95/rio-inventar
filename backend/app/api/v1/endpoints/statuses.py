@@ -1,9 +1,12 @@
+from app import models
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from typing import List
-import schemas
-import crud
-from db.session import get_db
+from app import models
+from app.auth import get_current_active_user
+from app import schemas
+from app import crud
+from app.db.session import get_db
 
 router = APIRouter()
 
@@ -14,3 +17,9 @@ def create_status(status: schemas.StatusCreate, db: Session = Depends(get_db)):
 @router.get("/", response_model=List[schemas.Status])
 def read_statuses(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     return crud.status.get_statuses(db, skip=skip, limit=limit)
+
+
+
+
+
+

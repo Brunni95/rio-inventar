@@ -1,11 +1,18 @@
 FROM python:3.11-slim
-WORKDIR /app
 
-COPY requirements.txt .
+WORKDIR /code
+
+ENV PYTHONPATH "${PYTHONPATH}:/code"
+
+COPY . .
+
+# NEU: Mach das Entrypoint-Skript ausführbar
+RUN chmod +x ./entrypoint.sh
+
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Wir kopieren den Inhalt von ./app direkt nach /app
-COPY ./app .
+# NEU: Setze unser Skript als den "Eingangspunkt" des Containers
+ENTRYPOINT ["./entrypoint.sh"]
 
-# Wir starten wieder direkt main:app
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+# Der CMD-Befehl wird jetzt als Argument an das Entrypoint-Skript übergeben
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

@@ -1,8 +1,8 @@
 // frontend/src/authConfig.js
 
-// Ersetze diese Werte durch deine eigenen aus der neuen App-Registrierung
-const CLIENT_ID = "168b7935-19c0-4a74-9df8-66f288175948";
-const TENANT_ID = "3f27241d-d949-4cf1-a670-1c492efb689c";
+// Lese die Konfiguration aus den Umgebungsvariablen, die Vite bereitstellt
+const CLIENT_ID = import.meta.env.VITE_AZURE_CLIENT_ID;
+const TENANT_ID = import.meta.env.VITE_AZURE_TENANT_ID;
 
 export const msalConfig = {
   auth: {
@@ -11,7 +11,7 @@ export const msalConfig = {
     redirectUri: "http://localhost:5173",
   },
   cache: {
-    cacheLocation: "sessionStorage",
+    cacheLocation: import.meta.env.VITE_MSAL_CACHE || "sessionStorage",
     storeAuthStateInCookie: false,
   },
 };
@@ -21,5 +21,6 @@ export const loginRequest = {
 };
 
 export const tokenRequest = {
-  scopes: ["api://168b7935-19c0-4a74-9df8-66f288175948/access_as_user"] // <-- 100% KORREKT HIER?
+  // Baue den Scope-String dynamisch mit der Client ID zusammen
+  scopes: [`api://${CLIENT_ID}/access_as_user`]
 };

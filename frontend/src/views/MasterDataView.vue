@@ -16,15 +16,15 @@ const newStatus = ref({ name: '' });
 const newAssetType = ref({ name: '' });
 const newSupplier = ref({ name: '', contact_person: '' });
 
-// Funktion, um alle Stammdaten-Listen zu laden
+// Funktion, um alle Stammdaten-Listen zu laden (unverändert)
 const fetchAllMasterData = async () => {
   try {
     const [locationsRes, manufacturersRes, statusesRes, assetTypesRes, suppliersRes] = await Promise.all([
-      api.get('/api/v1/locations'),
-      api.get('/api/v1/manufacturers'),
-      api.get('/api/v1/statuses'),
-      api.get('/api/v1/asset-types'),
-      api.get('/api/v1/suppliers'),
+      api.get('/api/v1/locations/'),
+      api.get('/api/v1/manufacturers/'),
+      api.get('/api/v1/statuses/'),
+      api.get('/api/v1/asset-types/'),
+      api.get('/api/v1/suppliers/'),
     ]);
     locations.value = locationsRes.data;
     manufacturers.value = manufacturersRes.data;
@@ -37,25 +37,53 @@ const fetchAllMasterData = async () => {
   }
 };
 
-// Generische Funktion zum Hinzufügen eines neuen Eintrags
-const addItem = async (endpoint, newItemRef, listRef) => {
-  if (!newItemRef.value.name.trim()) {
-    alert("Der Name darf nicht leer sein.");
-    return;
-  }
+// --- NEU: Eigene, einfache Funktion für jede Karte ---
+
+const addLocation = async () => {
+  if (!newLocation.value.name.trim()) return alert("Der Name darf nicht leer sein.");
   try {
-    await api.post(`/api/v1/${endpoint}`, newItemRef.value);
-    // Formular zurücksetzen
-    Object.keys(newItemRef.value).forEach(key => newItemRef.value[key] = '');
-    // Alle Daten neu laden, um die Listen zu aktualisieren
+    await api.post('/api/v1/locations/', newLocation.value);
+    newLocation.value = { name: '', description: '' }; // Formular zurücksetzen
     await fetchAllMasterData();
-  } catch (error) {
-    console.error(`Fehler beim Hinzufügen zu ${endpoint}:`, error);
-    alert(`Eintrag konnte nicht hinzugefügt werden. (Fehler: ${error.response?.data?.detail || error.message})`);
-  }
+  } catch (e) { alert(`Fehler: ${e.response?.data?.detail || e.message}`); }
 };
 
-// Lade die Daten, wenn die Seite geladen wird
+const addManufacturer = async () => {
+  if (!newManufacturer.value.name.trim()) return alert("Der Name darf nicht leer sein.");
+  try {
+    await api.post('/api/v1/manufacturers/', newManufacturer.value);
+    newManufacturer.value = { name: '' };
+    await fetchAllMasterData();
+  } catch (e) { alert(`Fehler: ${e.response?.data?.detail || e.message}`); }
+};
+
+const addStatus = async () => {
+  if (!newStatus.value.name.trim()) return alert("Der Name darf nicht leer sein.");
+  try {
+    await api.post('/api/v1/statuses/', newStatus.value);
+    newStatus.value = { name: '' };
+    await fetchAllMasterData();
+  } catch (e) { alert(`Fehler: ${e.response?.data?.detail || e.message}`); }
+};
+
+const addAssetType = async () => {
+  if (!newAssetType.value.name.trim()) return alert("Der Name darf nicht leer sein.");
+  try {
+    await api.post('/api/v1/asset-types/', newAssetType.value);
+    newAssetType.value = { name: '' };
+    await fetchAllMasterData();
+  } catch (e) { alert(`Fehler: ${e.response?.data?.detail || e.message}`); }
+};
+
+const addSupplier = async () => {
+  if (!newSupplier.value.name.trim()) return alert("Der Name darf nicht leer sein.");
+  try {
+    await api.post('/api/v1/suppliers/', newSupplier.value);
+    newSupplier.value = { name: '', contact_person: '' };
+    await fetchAllMasterData();
+  } catch (e) { alert(`Fehler: ${e.response?.data?.detail || e.message}`); }
+};
+
 onMounted(fetchAllMasterData);
 </script>
 
@@ -66,7 +94,8 @@ onMounted(fetchAllMasterData);
       <!-- Sektion für Standorte -->
       <div class="card">
         <h2>Standorte</h2>
-        <form @submit.prevent="addItem('locations', newLocation, locations)">
+        <!-- KORREKTUR: Ruft die spezifische Funktion auf -->
+        <form @submit.prevent="addLocation">
           <input v-model="newLocation.name" placeholder="Neuer Standort Name" />
           <input v-model="newLocation.description" placeholder="Beschreibung" />
           <button type="submit">Hinzufügen</button>
@@ -79,7 +108,7 @@ onMounted(fetchAllMasterData);
       <!-- Sektion für Hersteller -->
       <div class="card">
         <h2>Hersteller</h2>
-        <form @submit.prevent="addItem('manufacturers', newManufacturer, manufacturers)">
+        <form @submit.prevent="addManufacturer">
           <input v-model="newManufacturer.name" placeholder="Neuer Hersteller" />
           <button type="submit">Hinzufügen</button>
         </form>
@@ -91,7 +120,7 @@ onMounted(fetchAllMasterData);
       <!-- Sektion für Status -->
       <div class="card">
         <h2>Status</h2>
-        <form @submit.prevent="addItem('statuses', newStatus, statuses)">
+        <form @submit.prevent="addStatus">
           <input v-model="newStatus.name" placeholder="Neuer Status" />
           <button type="submit">Hinzufügen</button>
         </form>
@@ -103,7 +132,7 @@ onMounted(fetchAllMasterData);
       <!-- Sektion für Geräte-Typen -->
       <div class="card">
         <h2>Geräte-Typen</h2>
-        <form @submit.prevent="addItem('asset-types', newAssetType, assetTypes)">
+        <form @submit.prevent="addAssetType">
           <input v-model="newAssetType.name" placeholder="Neuer Geräte-Typ" />
           <button type="submit">Hinzufügen</button>
         </form>
@@ -115,13 +144,13 @@ onMounted(fetchAllMasterData);
       <!-- Sektion für Lieferanten -->
       <div class="card">
         <h2>Lieferanten</h2>
-        <form @submit.prevent="addItem('suppliers', newSupplier, suppliers)">
+        <form @submit.prevent="addSupplier">
           <input v-model="newSupplier.name" placeholder="Neuer Lieferant" />
           <input v-model="newSupplier.contact_person" placeholder="Ansprechperson" />
           <button type="submit">Hinzufügen</button>
         </form>
         <ul>
-          <li v-for="item in suppliers" :key="item.id">{{ item.name }} ({{ item.contact_person }})</li>
+          <li v-for="item in suppliers" :key="item.id">{{ item.name }} <span v-if="item.contact_person">({{ item.contact_person }})</span></li>
         </ul>
       </div>
     </div>
@@ -130,7 +159,6 @@ onMounted(fetchAllMasterData);
 
 <style scoped>
 .master-data-container {
-  padding: 2rem;
   width: 100%;
 }
 .grid {

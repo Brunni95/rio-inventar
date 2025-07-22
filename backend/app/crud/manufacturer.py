@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
-import models
-import schemas
+from app import models
+from app import schemas
 
 def get_manufacturer(db: Session, manufacturer_id: int):
     return db.query(models.Manufacturer).filter(models.Manufacturer.id == manufacturer_id).first()
@@ -14,3 +14,4 @@ def create_manufacturer(db: Session, manufacturer: schemas.ManufacturerCreate):
     db.commit()
     db.refresh(db_manufacturer)
     return db_manufacturer
+

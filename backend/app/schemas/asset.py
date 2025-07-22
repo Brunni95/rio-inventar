@@ -1,60 +1,46 @@
 from pydantic import BaseModel
 from datetime import date
+from typing import Optional
 
-# Importiere die fertigen Schemas, die wir gerade erstellt haben
+# Importiere die fertigen Schemas aus ihren eigenen Dateien
 from .location import Location
 from .manufacturer import Manufacturer
 from .status import Status
 from .supplier import Supplier
+from .user import User
+from .asset_type import AssetType
 
 class AssetBase(BaseModel):
     inventory_number: str
-    serial_number: str | None = None
-    model: str | None = None
-    assigned_to: str | None = None
-    department: str | None = None
-    os_version: str | None = None
-    installation_date: date | None = None
-    warranty_expiry: date | None = None
-    purchase_date: date | None = None
-    notes: str | None = None
-    ip_address: str | None = None
-    hostname: str | None = None
-    mac_address: str | None = None
+    serial_number: Optional[str] = None
+    model: Optional[str] = None
+    purchase_price: Optional[float] = None
+    department: Optional[str] = None
+    os_version: Optional[str] = None
+    installation_date: Optional[date] = None
+    warranty_expiry: Optional[date] = None
+    purchase_date: Optional[date] = None
+    notes: Optional[str] = None
+    ip_address: Optional[str] = None
+    hostname: Optional[str] = None
+    mac_address: Optional[str] = None
 
 class AssetCreate(AssetBase):
-    # Beim Erstellen übergeben wir nur die IDs der verknüpften Objekte
     asset_type_id: int
     manufacturer_id: int
     status_id: int
     location_id: int
-    supplier_id: int | None = None
+    supplier_id: Optional[int] = None
+    user_id: Optional[int] = None
 
 class Asset(AssetBase):
     id: int
-    # Beim Auslesen wollen wir die kompletten, verschachtelten Objekte sehen
-    asset_type: BaseModel # Temporär, wird unten ersetzt
+    asset_type: AssetType
     manufacturer: Manufacturer
     status: Status
     location: Location
-    supplier: Supplier | None = None
+    supplier: Optional[Supplier] = None
+    user: Optional[User] = None
 
     class Config:
         from_attributes = True
-
-# Wir brauchen noch ein Schema für AssetType, das in Asset verwendet wird
-class AssetTypeBase(BaseModel):
-    name: str
-
-class AssetTypeCreate(AssetTypeBase):
-    pass
-
-class AssetType(AssetTypeBase):
-    id: int
-
-    class Config:
-        from_attributes = True
-
-# Jetzt, wo AssetType definiert ist, können wir das Asset-Schema finalisieren
-Asset.model_rebuild()
-Asset.model_fields['asset_type'] = AssetType.model_validate

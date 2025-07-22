@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
-import models
-import schemas
+from app import models
+from app import schemas
 
 def get_status(db: Session, status_id: int):
     return db.query(models.Status).filter(models.Status.id == status_id).first()
@@ -14,3 +14,4 @@ def create_status(db: Session, status: schemas.StatusCreate):
     db.commit()
     db.refresh(db_status)
     return db_status
+

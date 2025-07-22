@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
-import models
-import schemas
+from app import models
+from app import schemas
 
 def get_supplier(db: Session, supplier_id: int):
     return db.query(models.Supplier).filter(models.Supplier.id == supplier_id).first()
@@ -14,3 +14,4 @@ def create_supplier(db: Session, supplier: schemas.SupplierCreate):
     db.commit()
     db.refresh(db_supplier)
     return db_supplier
+

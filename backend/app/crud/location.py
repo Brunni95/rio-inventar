@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
-import models
-import schemas
+from app import models
+from app import schemas
 
 def get_location(db: Session, location_id: int):
     return db.query(models.Location).filter(models.Location.id == location_id).first()
@@ -14,3 +14,4 @@ def create_location(db: Session, location: schemas.LocationCreate):
     db.commit()
     db.refresh(db_location)
     return db_location
+

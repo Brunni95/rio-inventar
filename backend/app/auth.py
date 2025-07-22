@@ -1,14 +1,18 @@
+# in backend/app/auth.py
+
 import httpx
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import jwt, JWTError
 import asyncio
+from sqlalchemy.orm import Session
 
-TENANT_ID = "3f27241d-d949-4cf1-a670-1c492efb689c"
-CLIENT_ID = "168b7935-19c0-4a74-9df8-66f288175948"
+# Importiere unsere neuen CRUD-Funktionen, Schemas, Modelle und die DB-Session
+from app import crud, schemas, models
+from app.db.session import get_db
+from app.core.config import AZURE_TENANT_ID, AZURE_CLIENT_ID
 
-# v1.0 Metadaten-URL (ohne /v2.0)
-METADATA_URL = f"https://login.microsoftonline.com/{TENANT_ID}/.well-known/openid-configuration"
+METADATA_URL = f"https://login.microsoftonline.com/{AZURE_TENANT_ID}/v2.0/.well-known/openid-configuration"
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
@@ -16,7 +20,7 @@ jwks_cache = {}
 
 async def load_jwks():
     global jwks_cache
-    print("Loading JWKS keys from Azure (v1.0)...")
+    print("Loading JWKS keys from Azure (v2.0)...")
     async with httpx.AsyncClient() as client:
         try:
             metadata_response = await client.get(METADATA_URL)
@@ -31,7 +35,7 @@ async def load_jwks():
             print(f"Failed to load JWKS keys: {e}")
             jwks_cache = {}
 
-def get_current_user(token: str = Depends(oauth2_scheme)):
+async def get_current_active_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)) -> models.User:
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
@@ -39,25 +43,45 @@ def get_current_user(token: str = Depends(oauth2_scheme)):
     )
     try:
         if not jwks_cache:
+            print("Error: JWKS keys are not loaded. Cannot validate token.")
             raise credentials_exception
 
         unverified_header = jwt.get_unverified_header(token)
         kid = unverified_header.get("kid")
 
         if kid not in jwks_cache:
+            print(f"Error: Key ID '{kid}' not found in JWKS cache.")
             raise credentials_exception
 
         rsa_key = jwks_cache[kid]
 
-        # v1.0 Issuer URL
         payload = jwt.decode(
             token,
             rsa_key,
             algorithms=["RS256"],
-            audience=f"api://{CLIENT_ID}", # <-- KORREKT
-            issuer=f"https://sts.windows.net/{TENANT_ID}/"
+            audience=f"api://{AZURE_CLIENT_ID}",
+            issuer=f"https://sts.windows.net/{AZURE_TENANT_ID}/"
         )
-        return payload
+
+        azure_oid: str = payload.get("oid")
+        if azure_oid is None:
+            raise credentials_exception
+
     except JWTError as e:
         print(f"Token validation error: {e}")
         raise credentials_exception
+
+    # --- BENUTZER-SYNCHRONISATION ---
+    user = crud.user.get_user_by_azure_oid(db, azure_oid=azure_oid)
+
+    if not user:
+        print(f"New user with OID {azure_oid} detected. Creating local user record.")
+        user_in = schemas.UserCreate(
+            azure_oid=azure_oid,
+            email=payload.get("upn") or payload.get("email"),
+            display_name=payload.get("name"),
+            department=payload.get("department")
+        )
+        user = crud.user.create_user(db, user=user_in)
+
+    return user

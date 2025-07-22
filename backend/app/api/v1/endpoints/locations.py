@@ -1,9 +1,12 @@
-from fastapi import APIRouter, Depends, HTTPException
+from app import models
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from typing import List
-import schemas
-import crud
-from db.session import get_db
+from app import models
+from app.auth import get_current_active_user
+from app import schemas
+from app import crud
+from app.db.session import get_db
 
 router = APIRouter()
 
@@ -15,3 +18,9 @@ def create_location(location: schemas.LocationCreate, db: Session = Depends(get_
 def read_locations(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     locations = crud.location.get_locations(db, skip=skip, limit=limit)
     return locations
+
+
+
+
+
+

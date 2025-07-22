@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
-import models
-import schemas
+from app import models
+from app import schemas
 
 def get_asset_type(db: Session, asset_type_id: int):
     return db.query(models.AssetType).filter(models.AssetType.id == asset_type_id).first()
@@ -14,3 +14,4 @@ def create_asset_type(db: Session, asset_type: schemas.AssetTypeCreate):
     db.commit()
     db.refresh(db_asset_type)
     return db_asset_type
+
