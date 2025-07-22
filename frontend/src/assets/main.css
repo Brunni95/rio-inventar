@@ -1,35 +1,43 @@
 @import './base.css';
 
+/* frontend/src/assets/main.css */
+
+/* Setzt die Basis für die gesamte Seite zurück */
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  background-color: #f4f7f6;
+}
+
+/* Stellt sicher, dass das Haupt-App-Element die volle Höhe und Breite hat */
 #app {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  font-weight: normal;
+  min-height: 100vh;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
-a,
-.green {
-  text-decoration: none;
-  color: hsla(160, 100%, 37%, 1);
-  transition: 0.4s;
-  padding: 3px;
+/* --- NEU: Der zentrale und wiederverwendbare Layout-Container --- */
+.container {
+  width: 100%;
+  /* Eine grosszügige maximale Breite für Ultrawide-Screens */
+  max-width: 1800px;
+  /* Zentriert den Container horizontal */
+  margin-left: auto;
+  margin-right: auto;
+  /* Abstand an den Seiten */
+  padding-left: 2.5rem;
+  padding-right: 2.5rem;
+  /* Stellt sicher, dass Padding die Gesamtbreite nicht beeinflusst */
+  box-sizing: border-box;
 }
 
-@media (hover: hover) {
-  a:hover {
-    background-color: hsla(160, 100%, 37%, 0.2);
-  }
+/* Allgemeine Stilverbesserungen */
+button {
+  cursor: pointer;
 }
 
-@media (min-width: 1024px) {
-  body {
-    display: flex;
-    place-items: center;
-  }
-
-  #app {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    padding: 0 2rem;
-  }
+input, select, textarea, button {
+  font-size: 1rem;
+  box-sizing: border-box;
 }
