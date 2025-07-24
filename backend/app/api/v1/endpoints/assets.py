@@ -1,6 +1,6 @@
 # Datei: backend/app/api/v1/endpoints/assets.py
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status, Response # <-- HIER IST DIE KORREKTUR
 from sqlalchemy.orm import Session
 from typing import List, Optional
 
@@ -10,10 +10,6 @@ from app.db.session import get_db
 
 router = APIRouter()
 
-# Wichtiger Hinweis zur Reihenfolge:
-# In FastAPI werden Routen in der Reihenfolge geprüft, in der sie deklariert sind.
-# Wir deklarieren zuerst die "allgemeinere" Route (GET /) und dann die
-# "spezifischeren" (GET /{asset_id}).
 
 @router.get("/", response_model=List[schemas.Asset])
 def read_assets(
@@ -29,6 +25,7 @@ def read_assets(
     assets = crud.asset.get_multi_with_search(db, skip=skip, limit=limit, search=search)
     return assets
 
+
 @router.post("/", response_model=schemas.Asset, status_code=status.HTTP_201_CREATED)
 def create_asset(
         *,
@@ -41,6 +38,7 @@ def create_asset(
     """
     asset = crud.asset.create_with_log(db=db, obj_in=asset_in, user_id=current_user.id)
     return asset
+
 
 @router.get("/{asset_id}", response_model=schemas.Asset)
 def read_asset(
@@ -56,6 +54,7 @@ def read_asset(
     if not asset:
         raise HTTPException(status_code=404, detail="Asset not found")
     return asset
+
 
 @router.get("/{asset_id}/logs", response_model=List[schemas.AssetLog])
 def read_asset_logs(
@@ -90,6 +89,7 @@ def update_asset(
 
     asset = crud.asset.update_with_log(db=db, db_obj=asset, obj_in=asset_in, user_id=current_user.id)
     return asset
+
 
 @router.delete("/{asset_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_asset(
