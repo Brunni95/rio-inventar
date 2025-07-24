@@ -1,20 +1,22 @@
+# Datei: backend/app/crud/user.py
 from sqlalchemy.orm import Session
-from app import models, schemas
+from app.crud.base import CRUDBase
+from app.models import User
+from app.schemas import UserCreate, UserUpdate
 
-def get_user_by_azure_oid(db: Session, azure_oid: str):
-    return db.query(models.User).filter(models.User.azure_oid == azure_oid).first()
+class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
+    def get_user_by_azure_oid(self, db: Session, *, azure_oid: str) -> User | None:
+        """
+        Sucht einen Benutzer anhand seiner eindeutigen Azure Object ID.
+        """
+        return db.query(User).filter(User.azure_oid == azure_oid).first()
 
-def get_users(db: Session, skip: int = 0, limit: int = 100):
-    return db.query(models.User).offset(skip).limit(limit).all()
+    def create_user(self, db: Session, *, user: UserCreate) -> User:
+        """
+        Diese Methode ist ein Alias für die Standard-Create-Methode,
+        um die Kompatibilität mit dem bestehenden Auth-Code zu wahren.
+        """
+        return self.create(db, obj_in=user)
 
-def create_user(db: Session, user: schemas.UserCreate):
-    db_user = models.User(
-        azure_oid=user.azure_oid,
-        email=user.email,
-        display_name=user.display_name,
-        department=user.department
-    )
-    db.add(db_user)
-    db.commit()
-    db.refresh(db_user)
-    return db_user
+# WICHTIG: Erstelle die Instanz, die in __init__.py importiert wird
+user = CRUDUser(User)

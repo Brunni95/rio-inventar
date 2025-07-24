@@ -1,12 +1,18 @@
-from sqlalchemy.orm import Session, joinedload
-from app import models, schemas
+# Datei: backend/app/crud/asset_log.py
 
-def create_asset_log(db: Session, log_entry: schemas.AssetLogCreate):
-    db_log = models.AssetLog(**log_entry.model_dump())
-    db.add(db_log)
-    db.commit()
-    db.refresh(db_log)
-    return db_log
+from typing import List
+from sqlalchemy.orm import Session
 
-def get_logs_for_asset(db: Session, asset_id: int):
-    return db.query(models.AssetLog).filter(models.AssetLog.asset_id == asset_id).options(joinedload(models.AssetLog.changed_by_user)).order_by(models.AssetLog.timestamp.desc()).all()
+from app.crud.base import CRUDBase
+from app.models import AssetLog
+from app.schemas import AssetLogCreate, AssetLogUpdate  # Wir brauchen ein Update-Schema
+
+class CRUDAssetLog(CRUDBase[AssetLog, AssetLogCreate, AssetLogUpdate]):
+    def get_by_asset(self, db: Session, *, asset_id: int) -> List[AssetLog]:
+        """
+        Ruft alle Log-Einträge für ein bestimmtes Asset ab.
+        """
+        return db.query(AssetLog).filter(AssetLog.asset_id == asset_id).order_by(AssetLog.timestamp.desc()).all()
+
+# WICHTIG: Erstelle die Instanz, die in __init__.py importiert wird.
+asset_log = CRUDAssetLog(AssetLog)

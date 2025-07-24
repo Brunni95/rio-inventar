@@ -1,156 +1,134 @@
 <script setup>
 import { ref, onMounted } from 'vue';
 import api from '../api';
+import { getAccount } from '../authService';
 
-// Refs für die Listen der Stammdaten
-const locations = ref([]);
-const manufacturers = ref([]);
-const statuses = ref([]);
-const assetTypes = ref([]);
-const suppliers = ref([]);
+// Der Haupt-State für alle Stammdaten, bleibt unverändert
+const masterData = ref({
+  locations: [],
+  manufacturers: [],
+  statuses: [],
+  suppliers: [],
+  'asset-types': [],
+});
 
-// Refs für die Eingabefelder der neuen Einträge
-const newLocation = ref({ name: '', description: '' });
-const newManufacturer = ref({ name: '' });
-const newStatus = ref({ name: '' });
-const newAssetType = ref({ name: '' });
-const newSupplier = ref({ name: '', contact_person: '' });
+// State für die Formular-Eingaben, bleibt unverändert
+const newItems = ref({
+  locations: { name: '' },
+  manufacturers: { name: '' },
+  statuses: { name: '' },
+  suppliers: { name: '' },
+  'asset-types': { name: '' },
+});
 
-// Funktion, um alle Stammdaten-Listen zu laden (unverändert)
+const errorMessage = ref('');
+
+// Konfigurationsobjekt, um Wiederholungen zu vermeiden. Bleibt gleich.
+const dataTypes = {
+  locations: { title: 'Standorte', endpoint: '/api/v1/locations/' },
+  manufacturers: { title: 'Hersteller', endpoint: '/api/v1/manufacturers/' },
+  statuses: { title: 'Status-Typen', endpoint: '/api/v1/statuses/' },
+  suppliers: { title: 'Lieferanten', endpoint: '/api/v1/suppliers/' },
+  'asset-types': { title: 'Geräte-Typen', endpoint: '/api/v1/asset-types/' },
+};
+
+// Funktion zum Laden aller Daten, bleibt unverändert.
 const fetchAllMasterData = async () => {
   try {
-    const [locationsRes, manufacturersRes, statusesRes, assetTypesRes, suppliersRes] = await Promise.all([
-      api.get('/api/v1/locations/'),
-      api.get('/api/v1/manufacturers/'),
-      api.get('/api/v1/statuses/'),
-      api.get('/api/v1/asset-types/'),
-      api.get('/api/v1/suppliers/'),
-    ]);
-    locations.value = locationsRes.data;
-    manufacturers.value = manufacturersRes.data;
-    statuses.value = statusesRes.data;
-    assetTypes.value = assetTypesRes.data;
-    suppliers.value = suppliersRes.data;
+    const requests = Object.entries(dataTypes).map(([key, config]) =>
+      api.get(config.endpoint).then(response => ({ key, data: response.data }))
+    );
+    const results = await Promise.all(requests);
+    results.forEach(({ key, data }) => {
+      masterData.value[key] = data;
+    });
   } catch (error) {
-    console.error("Fehler beim Laden der Stammdaten:", error);
-    alert("Die Stammdaten konnten nicht geladen werden.");
+    errorMessage.value = 'Stammdaten konnten nicht geladen werden.';
+    console.error(error);
   }
 };
 
-// --- NEU: Eigene, einfache Funktion für jede Karte ---
-
-const addLocation = async () => {
-  if (!newLocation.value.name.trim()) return alert("Der Name darf nicht leer sein.");
+// Funktion zum Hinzufügen neuer Einträge, bleibt unverändert.
+const handleAddItem = async (type) => {
   try {
-    await api.post('/api/v1/locations/', newLocation.value);
-    newLocation.value = { name: '', description: '' }; // Formular zurücksetzen
-    await fetchAllMasterData();
-  } catch (e) { alert(`Fehler: ${e.response?.data?.detail || e.message}`); }
+    const config = dataTypes[type];
+    const newItem = newItems.value[type];
+    if (!newItem.name.trim()) return;
+
+    const response = await api.post(config.endpoint, { name: newItem.name });
+    masterData.value[type].push(response.data);
+    newItem.name = ''; // Formular zurücksetzen
+  } catch (error) {
+    alert(`Fehler beim Hinzufügen von '${dataTypes[type].title}': ${error.response?.data?.detail || error.message}`);
+  }
 };
 
-const addManufacturer = async () => {
-  if (!newManufacturer.value.name.trim()) return alert("Der Name darf nicht leer sein.");
+// ==========================================================
+// NEU: Funktion zum Löschen von Einträgen
+// ==========================================================
+const handleDeleteItem = async (type, id) => {
+  // Sicherheitsabfrage, um versehentliches Löschen zu verhindern
+  if (!confirm('Bist du sicher, dass du diesen Eintrag löschen möchtest? Diese Aktion kann nicht rückgängig gemacht werden.')) {
+    return;
+  }
+
   try {
-    await api.post('/api/v1/manufacturers/', newManufacturer.value);
-    newManufacturer.value = { name: '' };
-    await fetchAllMasterData();
-  } catch (e) { alert(`Fehler: ${e.response?.data?.detail || e.message}`); }
+    const config = dataTypes[type];
+    // Der API-Aufruf an den neuen DELETE-Endpunkt
+    await api.delete(`${config.endpoint}${id}`);
+
+    // Bei Erfolg: Entferne das Element aus der lokalen Liste für ein sofortiges UI-Update
+    const index = masterData.value[type].findIndex(item => item.id === id);
+    if (index !== -1) {
+      masterData.value[type].splice(index, 1);
+    }
+  } catch (error) {
+    // Hier fangen wir die Fehler vom Backend ab
+    if (error.response && error.response.status === 409) {
+      // Speziell für den "Conflict"-Fehler (wenn der Eintrag noch verwendet wird)
+      alert(`Löschen fehlgeschlagen: ${error.response.data.detail}`);
+    } else {
+      // Allgemeiner Fehler
+      alert(`Ein Fehler ist aufgetreten. Der Eintrag konnte nicht gelöscht werden.`);
+    }
+    console.error(`Fehler beim Löschen von '${type}' mit ID ${id}:`, error);
+  }
 };
 
-const addStatus = async () => {
-  if (!newStatus.value.name.trim()) return alert("Der Name darf nicht leer sein.");
-  try {
-    await api.post('/api/v1/statuses/', newStatus.value);
-    newStatus.value = { name: '' };
-    await fetchAllMasterData();
-  } catch (e) { alert(`Fehler: ${e.response?.data?.detail || e.message}`); }
-};
-
-const addAssetType = async () => {
-  if (!newAssetType.value.name.trim()) return alert("Der Name darf nicht leer sein.");
-  try {
-    await api.post('/api/v1/asset-types/', newAssetType.value);
-    newAssetType.value = { name: '' };
-    await fetchAllMasterData();
-  } catch (e) { alert(`Fehler: ${e.response?.data?.detail || e.message}`); }
-};
-
-const addSupplier = async () => {
-  if (!newSupplier.value.name.trim()) return alert("Der Name darf nicht leer sein.");
-  try {
-    await api.post('/api/v1/suppliers/', newSupplier.value);
-    newSupplier.value = { name: '', contact_person: '' };
-    await fetchAllMasterData();
-  } catch (e) { alert(`Fehler: ${e.response?.data?.detail || e.message}`); }
-};
-
-onMounted(fetchAllMasterData);
+// onMounted bleibt unverändert
+onMounted(() => {
+  if (getAccount()) {
+    fetchAllMasterData();
+  }
+});
 </script>
 
 <template>
   <div class="master-data-container">
-    <h1>Stammdaten-Verwaltung</h1>
+    <div v-if="errorMessage" class="error-message">{{ errorMessage }}</div>
+
+    <!-- Die Grid-Struktur bleibt unverändert -->
     <div class="grid">
-      <!-- Sektion für Standorte -->
-      <div class="card">
-        <h2>Standorte</h2>
-        <!-- KORREKTUR: Ruft die spezifische Funktion auf -->
-        <form @submit.prevent="addLocation">
-          <input v-model="newLocation.name" placeholder="Neuer Standort Name" />
-          <input v-model="newLocation.description" placeholder="Beschreibung" />
-          <button type="submit">Hinzufügen</button>
-        </form>
-        <ul>
-          <li v-for="item in locations" :key="item.id">{{ item.name }}</li>
-        </ul>
-      </div>
+      <div v-for="(config, type) in dataTypes" :key="type" class="card">
+        <h3>{{ config.title }}</h3>
 
-      <!-- Sektion für Hersteller -->
-      <div class="card">
-        <h2>Hersteller</h2>
-        <form @submit.prevent="addManufacturer">
-          <input v-model="newManufacturer.name" placeholder="Neuer Hersteller" />
-          <button type="submit">Hinzufügen</button>
+        <!-- Das Formular zum Hinzufügen bleibt unverändert -->
+        <form @submit.prevent="handleAddItem(type)" class="add-form">
+          <input v-model="newItems[type].name" :placeholder="`Neuen ${config.title.slice(0, -1)} hinzufügen...`" required />
+          <button type="submit">+</button>
         </form>
-        <ul>
-          <li v-for="item in manufacturers" :key="item.id">{{ item.name }}</li>
-        </ul>
-      </div>
 
-      <!-- Sektion für Status -->
-      <div class="card">
-        <h2>Status</h2>
-        <form @submit.prevent="addStatus">
-          <input v-model="newStatus.name" placeholder="Neuer Status" />
-          <button type="submit">Hinzufügen</button>
-        </form>
-        <ul>
-          <li v-for="item in statuses" :key="item.id">{{ item.name }}</li>
-        </ul>
-      </div>
-
-      <!-- Sektion für Geräte-Typen -->
-      <div class="card">
-        <h2>Geräte-Typen</h2>
-        <form @submit.prevent="addAssetType">
-          <input v-model="newAssetType.name" placeholder="Neuer Geräte-Typ" />
-          <button type="submit">Hinzufügen</button>
-        </form>
-        <ul>
-          <li v-for="item in assetTypes" :key="item.id">{{ item.name }}</li>
-        </ul>
-      </div>
-
-      <!-- Sektion für Lieferanten -->
-      <div class="card">
-        <h2>Lieferanten</h2>
-        <form @submit.prevent="addSupplier">
-          <input v-model="newSupplier.name" placeholder="Neuer Lieferant" />
-          <input v-model="newSupplier.contact_person" placeholder="Ansprechperson" />
-          <button type="submit">Hinzufügen</button>
-        </form>
-        <ul>
-          <li v-for="item in suppliers" :key="item.id">{{ item.name }} <span v-if="item.contact_person">({{ item.contact_person }})</span></li>
+        <!-- Die Liste wird um den Löschen-Button erweitert -->
+        <ul class="item-list">
+          <li v-for="item in masterData[type]" :key="item.id">
+            <span>{{ item.name }}</span>
+            <!-- ========================================================== -->
+            <!-- NEU: Der Button zum Löschen -->
+            <!-- ========================================================== -->
+            <button @click="handleDeleteItem(type, item.id)" class="delete-btn" title="Löschen">
+              🗑️
+            </button>
+          </li>
         </ul>
       </div>
     </div>
@@ -159,54 +137,109 @@ onMounted(fetchAllMasterData);
 
 <style scoped>
 .master-data-container {
-  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
 }
+
 .grid {
   display: grid;
+  /* Passt die Anzahl der Spalten an die Bildschirmbreite an */
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   gap: 1.5rem;
 }
+
 .card {
-  border: 1px solid #ddd;
+  background-color: #ffffff;
   border-radius: 8px;
-  padding: 1rem;
-  background-color: #f9f9f9;
-}
-.card h2 {
-  margin-top: 0;
-  border-bottom: 2px solid #eee;
-  padding-bottom: 0.5rem;
-}
-form {
+  padding: 1.5rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
   display: flex;
   flex-direction: column;
+}
+
+.card h3 {
+  margin-top: 0;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 0.75rem;
+  color: #333;
+}
+
+.add-form {
+  display: flex;
   gap: 0.5rem;
   margin-bottom: 1rem;
 }
-input {
-  padding: 0.5rem;
+
+.add-form input {
+  flex-grow: 1;
+  padding: 0.75rem;
   border: 1px solid #ccc;
   border-radius: 4px;
 }
-button {
-  padding: 0.5rem;
+
+.add-form button {
+  flex-shrink: 0;
+  width: 44px;
+  border: none;
   background-color: #42b883;
   color: white;
-  border: none;
+  font-size: 1.5rem;
+  font-weight: bold;
   border-radius: 4px;
   cursor: pointer;
+  transition: background-color 0.2s;
 }
-ul {
-  list-style-type: none;
+
+.add-form button:hover {
+  background-color: #369469;
+}
+
+.item-list {
+  list-style: none;
   padding: 0;
-  max-height: 200px;
-  overflow-y: auto;
+  margin: 0;
+  overflow-y: auto; /* Falls die Liste sehr lang wird */
 }
-li {
-  background-color: white;
+
+.item-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 0.5rem;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.item-list li:last-child {
+  border-bottom: none;
+}
+
+/* ========================================================== */
+/* NEU: Style für den Löschen-Button */
+/* ========================================================== */
+.delete-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1rem;
   padding: 0.5rem;
-  border: 1px solid #eee;
-  margin-bottom: 5px;
+  border-radius: 50%;
+  line-height: 1;
+  width: 32px;
+  height: 32px;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+.delete-btn:hover {
+  background-color: #fce8e6; /* Leichter roter Hintergrund */
+  color: #d93025; /* Rote Farbe für das Icon */
+}
+
+.error-message {
+  color: #d93025;
+  background-color: #fce8e6;
+  padding: 1rem;
   border-radius: 4px;
+  margin-bottom: 1.5rem;
 }
 </style>

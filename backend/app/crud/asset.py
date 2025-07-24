@@ -1,90 +1,96 @@
-from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import or_
-from app import models, schemas, crud
+# Datei: backend/app/crud/asset.py
 
-def get_asset(db: Session, asset_id: int):
-    return db.query(models.Asset).filter(models.Asset.id == asset_id).first()
+from sqlalchemy.orm import Session
+from sqlalchemy import or_ # WICHTIG: für die Suche benötigt
+from typing import Any, Dict, List, Union
 
-def get_assets(db: Session, skip: int = 0, limit: int = 100, search: str | None = None):
-    query = db.query(models.Asset).options(
-        joinedload(models.Asset.asset_type),
-        joinedload(models.Asset.manufacturer),
-        joinedload(models.Asset.status),
-        joinedload(models.Asset.location),
-        joinedload(models.Asset.supplier),
-        joinedload(models.Asset.user)
-    )
-    if search:
-        search_term = f"%{search}%"
-        query = query.join(models.Manufacturer).join(models.Location).join(models.User, isouter=True).filter(
-            or_(
-                models.Asset.inventory_number.ilike(search_term),
-                models.Asset.serial_number.ilike(search_term),
-                models.Asset.model.ilike(search_term),
-                models.User.display_name.ilike(search_term),
-                models.Manufacturer.name.ilike(search_term),
-                models.Location.name.ilike(search_term)
+from app.crud.base import CRUDBase
+from app.models import Asset, AssetLog, User # User-Modell für die Suche importieren
+from app.schemas import AssetCreate, AssetUpdate
+
+class CRUDAsset(CRUDBase[Asset, AssetCreate, AssetUpdate]):
+    def get_multi_with_search(
+            self, db: Session, *, skip: int = 0, limit: int = 100, search: str | None = None
+    ) -> List[Asset]:
+        """
+        Ruft eine Liste von Assets ab, mit optionaler Suche über mehrere Felder.
+        """
+        # Wir beginnen mit einer Basis-Abfrage.
+        # Ein LEFT JOIN (isouter=True) zu User stellt sicher, dass auch Assets
+        # ohne zugewiesenen Benutzer gefunden werden.
+        query = db.query(self.model).join(User, User.id == self.model.user_id, isouter=True)
+
+        if search:
+            # Wenn ein Suchbegriff vorhanden ist, filtern wir.
+            # ilike ist eine case-insensitive (ignoriert Gross-/Kleinschreibung) Suche.
+            search_term = f"%{search}%"
+            query = query.filter(
+                or_(
+                    Asset.inventory_number.ilike(search_term),
+                    Asset.model.ilike(search_term),
+                    Asset.hostname.ilike(search_term),
+                    Asset.serial_number.ilike(search_term),
+                    User.display_name.ilike(search_term) # Suche im Namen des Benutzers
+                )
             )
+
+        # Wende Paginierung an und gib die Resultate zurück.
+        return query.order_by(self.model.id.desc()).offset(skip).limit(limit).all()
+
+    def create_with_log(self, db: Session, *, obj_in: AssetCreate, user_id: int) -> Asset:
+        """
+        Erstellt ein neues Asset und protokolliert diese Aktion.
+        """
+        # Erstelle das Asset-Objekt mit der Basis-CRUD-Methode
+        db_obj = super().create(db, obj_in=obj_in)
+
+        # Erstelle den Log-Eintrag
+        log_entry = AssetLog(
+            asset_id=db_obj.id,
+            changed_by_user_id=user_id,
+            action="CREATE",
+            notes=f"Asset '{db_obj.inventory_number}' wurde erstellt."
         )
-    return query.offset(skip).limit(limit).all()
+        db.add(log_entry)
+        db.commit()
+        db.refresh(db_obj)
+        return db_obj
 
-def create_asset(db: Session, asset: schemas.AssetCreate, user_id: int):
-    db_asset = models.Asset(**asset.model_dump())
-    db.add(db_asset)
-    db.commit()
-    db.refresh(db_asset)
+    def update_with_log(
+            self, db: Session, *, db_obj: Asset, obj_in: Union[AssetUpdate, Dict[str, Any]], user_id: int
+    ) -> Asset:
+        """
+        Aktualisiert ein Asset und protokolliert alle geänderten Felder.
+        """
+        # Hole die alten Werte, bevor wir sie aktualisieren
+        old_data = {c.name: getattr(db_obj, c.name) for c in db_obj.__table__.columns}
 
-    # --- NEU: Log-Eintrag erstellen ---
-    log_entry = schemas.AssetLogCreate(
-        action="Asset erstellt",
-        asset_id=db_asset.id,
-        changed_by_user_id=user_id,
-        notes=f"Asset '{db_asset.inventory_number}' wurde erstellt."
-    )
-    crud.asset_log.create_asset_log(db, log_entry=log_entry)
+        # Aktualisiere das Objekt mit der Basis-CRUD-Methode
+        updated_obj = super().update(db, db_obj=db_obj, obj_in=obj_in)
 
-    return db_asset
+        # Konvertiere das Pydantic-Update-Objekt in ein Dictionary
+        if isinstance(obj_in, BaseModel):
+            update_data = obj_in.model_dump(exclude_unset=True)
+        else:
+            update_data = obj_in
 
-def update_asset(db: Session, db_asset: models.Asset, asset_update: schemas.AssetCreate, user_id: int):
-    update_data = asset_update.model_dump(exclude_unset=True)
-    # Speichere die alten Werte, bevor wir sie ändern
-    old_values = {key: getattr(db_asset, key) for key in update_data}
+        # Vergleiche alte und neue Werte und erstelle Log-Einträge
+        for field, new_value in update_data.items():
+            old_value = old_data.get(field)
+            if old_value != new_value:
+                log_entry = AssetLog(
+                    asset_id=db_obj.id,
+                    changed_by_user_id=user_id,
+                    action="UPDATE",
+                    field_changed=field,
+                    old_value=str(old_value),
+                    new_value=str(new_value)
+                )
+                db.add(log_entry)
 
-    for key, value in update_data.items():
-        setattr(db_asset, key, value)
+        db.commit()
+        db.refresh(updated_obj)
+        return updated_obj
 
-    db.add(db_asset)
-    db.commit()
-    db.refresh(db_asset)
-
-    # --- NEU: Log-Einträge für jede einzelne Änderung erstellen ---
-    for key, new_value in update_data.items():
-        old_value = old_values[key]
-        if old_value != new_value:
-            log_entry = schemas.AssetLogCreate(
-                action="Asset aktualisiert",
-                field_changed=key,
-                old_value=str(old_value),
-                new_value=str(new_value),
-                asset_id=db_asset.id,
-                changed_by_user_id=user_id
-            )
-            crud.asset_log.create_asset_log(db, log_entry=log_entry)
-
-    return db_asset
-
-def delete_asset(db: Session, db_asset: models.Asset, user_id: int):
-    asset_id = db_asset.id
-    inventory_number = db_asset.inventory_number
-
-    # --- NEU: Log-Eintrag erstellen, BEVOR wir das Asset löschen ---
-    log_entry = schemas.AssetLogCreate(
-        action="Asset gelöscht",
-        asset_id=asset_id,
-        changed_by_user_id=user_id,
-        notes=f"Asset '{inventory_number}' wurde gelöscht."
-    )
-    crud.asset_log.create_asset_log(db, log_entry=log_entry)
-
-    db.delete(db_asset)
-    db.commit()
+# Erstelle eine Instanz der CRUD-Klasse, die wir in der API verwenden können.
+asset = CRUDAsset(Asset)

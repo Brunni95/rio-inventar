@@ -1,11 +1,16 @@
+﻿# Datei: backend/app/schemas/supplier.py
 from pydantic import BaseModel
+from typing import Optional
 
 class SupplierBase(BaseModel):
     name: str
-    contact_person: str | None = None
 
 class SupplierCreate(SupplierBase):
     pass
+
+# Update-Schema mit optionalem Namen
+class SupplierUpdate(BaseModel):
+    name: Optional[str] = None
 
 class Supplier(SupplierBase):
     id: int

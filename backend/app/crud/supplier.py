@@ -1,17 +1,11 @@
-from sqlalchemy.orm import Session
-from app import models
-from app import schemas
+﻿# Datei: backend/app/crud/supplier.py
+from app.crud.base import CRUDBase
+from app.models import Supplier
+from app.schemas import SupplierCreate, SupplierUpdate
 
-def get_supplier(db: Session, supplier_id: int):
-    return db.query(models.Supplier).filter(models.Supplier.id == supplier_id).first()
+class CRUDSupplier(CRUDBase[Supplier, SupplierCreate, SupplierUpdate]):
+    # Hier können später modellspezifische CRUD-Methoden hinzugefügt werden.
+    pass
 
-def get_suppliers(db: Session, skip: int = 0, limit: int = 100):
-    return db.query(models.Supplier).offset(skip).limit(limit).all()
-
-def create_supplier(db: Session, supplier: schemas.SupplierCreate):
-    db_supplier = models.Supplier(**supplier.model_dump())
-    db.add(db_supplier)
-    db.commit()
-    db.refresh(db_supplier)
-    return db_supplier
-
+# Wichtig: Erstelle eine Instanz, die in der API verwendet wird.
+supplier = CRUDSupplier(Supplier)

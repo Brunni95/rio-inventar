@@ -1,17 +1,11 @@
-from sqlalchemy.orm import Session
-from app import models
-from app import schemas
+﻿# Datei: backend/app/crud/manufacturer.py
+from app.crud.base import CRUDBase
+from app.models import Manufacturer
+from app.schemas import ManufacturerCreate, ManufacturerUpdate
 
-def get_manufacturer(db: Session, manufacturer_id: int):
-    return db.query(models.Manufacturer).filter(models.Manufacturer.id == manufacturer_id).first()
+class CRUDManufacturer(CRUDBase[Manufacturer, ManufacturerCreate, ManufacturerUpdate]):
+    # Hier können später modellspezifische CRUD-Methoden hinzugefügt werden.
+    pass
 
-def get_manufacturers(db: Session, skip: int = 0, limit: int = 100):
-    return db.query(models.Manufacturer).offset(skip).limit(limit).all()
-
-def create_manufacturer(db: Session, manufacturer: schemas.ManufacturerCreate):
-    db_manufacturer = models.Manufacturer(**manufacturer.model_dump())
-    db.add(db_manufacturer)
-    db.commit()
-    db.refresh(db_manufacturer)
-    return db_manufacturer
-
+# Wichtig: Erstelle eine Instanz, die in der API verwendet wird.
+manufacturer = CRUDManufacturer(Manufacturer)

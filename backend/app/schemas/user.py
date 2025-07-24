@@ -1,16 +1,24 @@
+# Datei: backend/app/schemas/user.py
 from pydantic import BaseModel
+from typing import Optional
 
 class UserBase(BaseModel):
-    email: str
-    display_name: str | None = None
-    department: str | None = None
+    email: Optional[str] = None
+    display_name: Optional[str] = None
+    department: Optional[str] = None
+    azure_oid: str
 
 class UserCreate(UserBase):
-    azure_oid: str
+    pass
+
+# Update-Klasse mit optionalen Feldern
+class UserUpdate(BaseModel):
+    email: Optional[str] = None
+    display_name: Optional[str] = None
+    department: Optional[str] = None
 
 class User(UserBase):
     id: int
-    azure_oid: str
 
     class Config:
         from_attributes = True

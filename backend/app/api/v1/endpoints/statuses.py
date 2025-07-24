@@ -1,25 +1,56 @@
-from app import models
-from fastapi import APIRouter, Depends
+﻿# Datei: backend/app/api/v1/endpoints/statuses.py
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy.orm import Session
 from typing import List
-from app import models
-from app.auth import get_current_active_user
-from app import schemas
-from app import crud
+
+from app import crud, models, schemas
 from app.db.session import get_db
+from app.auth import get_current_active_user
 
 router = APIRouter()
 
-@router.post("/", response_model=schemas.Status)
-def create_status(status: schemas.StatusCreate, db: Session = Depends(get_db)):
-    return crud.status.create_status(db=db, status=status)
-
 @router.get("/", response_model=List[schemas.Status])
-def read_statuses(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    return crud.status.get_statuses(db, skip=skip, limit=limit)
+def read_statuses(
+    db: Session = Depends(get_db),
+    skip: int = 0,
+    limit: int = 100,
+    current_user: models.User = Depends(get_current_active_user)
+):
+    """
+    Ruft eine Liste von statuses ab.
+    """
+    items = crud.status.get_multi(db, skip=skip, limit=limit)
+    return items
 
+@router.post("/", response_model=schemas.Status, status_code=status.HTTP_201_CREATED)
+def create_status(
+    *,
+    db: Session = Depends(get_db),
+    item_in: schemas.StatusCreate,
+    current_user: models.User = Depends(get_current_active_user)
+):
+    """
+    Erstellt einen neuen status.
+    """
+    return crud.status.create(db=db, obj_in=item_in)
 
+@router.delete("/{status_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_status(status_id: int, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_active_user)):
+    """
+    Löscht einen status.
+    """
+    # KORREKTE PYTHON-SYNTAX: '!=' und ':'
+    if "Status" != "User":
+        asset_dependency = db.query(models.Asset).filter(getattr(models.Asset, 'status_id') == status_id).first()
+        if asset_dependency:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"Status mit ID {status_id} ist noch bei einem Asset in Verwendung und kann nicht gelöscht werden."
+            )
 
+    db_item = crud.status.remove(db=db, id=status_id)
 
+    if not db_item:
+        raise HTTPException(status_code=404, detail="Status not found")
 
-
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

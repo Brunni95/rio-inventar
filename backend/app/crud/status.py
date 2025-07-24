@@ -1,17 +1,11 @@
-from sqlalchemy.orm import Session
-from app import models
-from app import schemas
+﻿# Datei: backend/app/crud/status.py
+from app.crud.base import CRUDBase
+from app.models import Status
+from app.schemas import StatusCreate, StatusUpdate
 
-def get_status(db: Session, status_id: int):
-    return db.query(models.Status).filter(models.Status.id == status_id).first()
+class CRUDStatus(CRUDBase[Status, StatusCreate, StatusUpdate]):
+    # Hier können später modellspezifische CRUD-Methoden hinzugefügt werden.
+    pass
 
-def get_statuses(db: Session, skip: int = 0, limit: int = 100):
-    return db.query(models.Status).offset(skip).limit(limit).all()
-
-def create_status(db: Session, status: schemas.StatusCreate):
-    db_status = models.Status(**status.model_dump())
-    db.add(db_status)
-    db.commit()
-    db.refresh(db_status)
-    return db_status
-
+# Wichtig: Erstelle eine Instanz, die in der API verwendet wird.
+status = CRUDStatus(Status)
