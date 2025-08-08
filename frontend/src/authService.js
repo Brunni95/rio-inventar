@@ -12,6 +12,17 @@ export const initializeMsal = async () => {
     if (accounts.length > 0) {
       msalInstance.setActiveAccount(accounts[0]);
     }
+    // Dark mode initialisieren, falls Nutzerpräferenz vorhanden ist (und speichern)
+    const root = document.documentElement;
+    const saved = localStorage.getItem('theme:dark');
+    if (saved === 'true') {
+      root.classList.add('dark');
+    } else if (saved === 'false') {
+      root.classList.remove('dark');
+    } else {
+      const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      if (prefersDark) root.classList.add('dark');
+    }
   } catch (err) {
     console.error("MSAL-Initialisierung fehlgeschlagen:", err);
   }

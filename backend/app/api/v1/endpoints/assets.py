@@ -17,12 +17,21 @@ def read_assets(
         skip: int = 0,
         limit: int = 100,
         search: Optional[str] = Query(None, description="Suche nach Inventarnr, Modell, Hostname oder Benutzername"),
+        order_by: Optional[str] = Query("id", description="Sortierschlüssel z. B. inventory_number, manufacturer.name"),
+        order_dir: Optional[str] = Query("desc", description="asc|desc"),
         current_user: models.User = Depends(get_current_active_user)
 ):
     """
     Ruft eine Liste von Assets ab, mit optionaler Suche.
     """
-    assets = crud.asset.get_multi_with_search(db, skip=skip, limit=limit, search=search)
+    assets = crud.asset.get_multi_with_search(
+        db,
+        skip=skip,
+        limit=limit,
+        search=search,
+        order_by=order_by or "id",
+        order_dir=order_dir or "desc",
+    )
     return assets
 
 

@@ -20,6 +20,10 @@ const assetHistory = ref([]);
 const isLoadingHistory = ref(false);
 
 const searchQuery = ref('');
+const sortBy = ref('id');
+const sortDir = ref('desc');
+const page = ref(1);
+const pageSize = ref(10);
 let debounceTimer = null;
 
 const newAssetForm = ref({
@@ -40,9 +44,12 @@ watch(searchQuery, () => {
 const fetchAssets = async () => {
   try {
     const params = new URLSearchParams();
-    if (searchQuery.value) {
-      params.append('search', searchQuery.value);
-    }
+    if (searchQuery.value) params.append('search', searchQuery.value);
+    params.append('order_by', sortBy.value);
+    params.append('order_dir', sortDir.value);
+    // Serverseitige Pagination
+    params.append('skip', String((page.value - 1) * pageSize.value));
+    params.append('limit', String(pageSize.value));
     const response = await api.get(`/api/v1/assets/?${params.toString()}`);
     assets.value = response.data;
   } catch (error) {
@@ -50,6 +57,30 @@ const fetchAssets = async () => {
     console.error(error);
   }
 };
+const pagedAssets = () => assets.value; // jetzt serverseitig paginiert
+const totalPages = () => page.value + (assets.value.length < pageSize.value ? 0 : 1); // einfache Abschätzung
+
+const getValue = (obj, path) => {
+  return path.split('.').reduce((acc, key) => (acc ? acc[key] : undefined), obj);
+};
+
+const changeSort = (key) => {
+  if (sortBy.value === key) {
+    sortDir.value = sortDir.value === 'asc' ? 'desc' : 'asc';
+  } else {
+    sortBy.value = key;
+    sortDir.value = 'asc';
+  }
+  page.value = 1;
+  fetchAssets();
+};
+
+const goToPage = (p) => {
+  if (p < 1) return;
+  page.value = p;
+  fetchAssets();
+};
+
 
 const fetchDropdownData = async () => {
   try {
@@ -201,22 +232,26 @@ onMounted(async () => {
       <h2>Inventarliste</h2>
       <div class="toolbar">
         <input v-model="searchQuery" placeholder="Suchen nach Inventar-Nr, Modell, Benutzer, Standort..." />
+        <div class="toolbar-actions">
+          <button class="btn-primary" @click="fetchAssets">Aktualisieren</button>
+          <button @click="resetForm">Formular zurücksetzen</button>
+        </div>
       </div>
       <div v-if="errorMessage" class="error">{{ errorMessage }}</div>
       <table v-else-if="assets.length > 0">
         <thead>
         <tr>
-          <th>Inventar-Nr.</th>
-          <th>Typ</th>
-          <th>Modell</th>
-          <th>Standort</th>
-          <th>Benutzer</th>
-          <th>Status</th>
+          <th @click="changeSort('inventory_number')" style="cursor:pointer">Inventar-Nr.</th>
+          <th @click="changeSort('asset_type.name')" style="cursor:pointer">Typ</th>
+          <th @click="changeSort('manufacturer.name')" style="cursor:pointer">Modell</th>
+          <th @click="changeSort('location.name')" style="cursor:pointer">Standort</th>
+          <th @click="changeSort('user.display_name')" style="cursor:pointer">Benutzer</th>
+          <th @click="changeSort('status.name')" style="cursor:pointer">Status</th>
           <th>Aktionen</th>
         </tr>
         </thead>
         <tbody>
-        <tr v-for="asset in assets" :key="asset.id">
+        <tr v-for="asset in pagedAssets()" :key="asset.id">
           <td>{{ asset.inventory_number }}</td>
           <td>{{ asset.asset_type.name }}</td>
           <td>{{ asset.manufacturer.name }} {{ asset.model }}</td>
@@ -233,6 +268,11 @@ onMounted(async () => {
         </tbody>
       </table>
       <p v-else>Keine Assets gefunden.</p>
+      <div class="pagination" v-if="assets.length > pageSize">
+        <button :disabled="page===1" @click="goToPage(page-1)">«</button>
+        <span>Seite {{ page }} / {{ totalPages() }}</span>
+        <button :disabled="page===totalPages()" @click="goToPage(page+1)">»</button>
+      </div>
     </section>
 
     <!-- NEU: Das Modal-Fenster für die Historie -->
@@ -262,7 +302,7 @@ onMounted(async () => {
 <style scoped>
 /* Der meiste Style bleibt unverändert */
 .inventory-container { display: flex; flex-direction: column; gap: 2rem; }
-.card { background-color: white; border-radius: 8px; padding: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+.card { background-color: var(--card-bg); border-radius: 8px; padding: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
 .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem; margin-bottom: 1rem; }
 textarea { width: 100%; min-height: 80px; margin-bottom: 1rem; }
 .form-actions { display: flex; gap: 1rem; }
@@ -271,11 +311,13 @@ button { cursor: pointer; border: none; font-weight: bold; color: white; }
 form button[type="submit"] { background-color: #42b883; }
 form button.cancel { background-color: #888; }
 table { width: 100%; border-collapse: collapse; }
-th, td { border-bottom: 1px solid #ddd; padding: 12px 15px; text-align: left; }
-th { background-color: #f8f8f8; font-weight: 600; }
+th, td { border-bottom: 1px solid var(--color-border); padding: 12px 15px; text-align: left; color: var(--text-strong); }
+th { background-color: var(--color-background-mute); font-weight: 600; color: var(--text-strong); }
 .actions button { padding: 0.25rem 0.5rem; margin-right: 5px; background: none; border: 1px solid #ccc; color: #333; }
-.toolbar { margin-bottom: 1.5rem; }
-.toolbar input { width: 100%; padding: 0.75rem; border: 1px solid #ccc; border-radius: 4px; }
+.toolbar { margin-bottom: 1.5rem; display: flex; gap: 0.75rem; align-items: center; }
+.toolbar input { flex: 1; padding: 0.75rem; border: 1px solid #ccc; border-radius: 4px; }
+.toolbar-actions { display: flex; gap: 0.5rem; }
+.pagination { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.75rem; }
 
 /* --- NEU: Styles für das Modal --- */
 .modal-overlay {

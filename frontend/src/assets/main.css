@@ -2,42 +2,72 @@
 
 /* frontend/src/assets/main.css */
 
-/* Setzt die Basis für die gesamte Seite zurück */
-body {
-  margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  background-color: #f4f7f6;
-}
-
-/* Stellt sicher, dass das Haupt-App-Element die volle Höhe und Breite hat */
-#app {
-  min-height: 100vh;
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-}
-
-/* --- NEU: Der zentrale und wiederverwendbare Layout-Container --- */
+/* Container */
 .container {
   width: 100%;
-  /* Eine grosszügige maximale Breite für Ultrawide-Screens */
-  max-width: 1800px;
-  /* Zentriert den Container horizontal */
+  max-width: 1200px;
   margin-left: auto;
   margin-right: auto;
-  /* Abstand an den Seiten */
-  padding-left: 2.5rem;
-  padding-right: 2.5rem;
-  /* Stellt sicher, dass Padding die Gesamtbreite nicht beeinflusst */
+  padding-left: 1.25rem;
+  padding-right: 1.25rem;
   box-sizing: border-box;
 }
 
-/* Allgemeine Stilverbesserungen */
+/* Green theme accents */
+:root {
+  --accent: #42b883;
+  --accent-strong: #2f9e6e;
+  --accent-weak: #eafaf3;
+  --card-bg: #ffffff;
+}
+
+a { color: var(--accent-strong); }
+a:hover { color: var(--accent); }
+
+.card {
+  background: var(--card-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+}
+
+.btn-primary {
+  background: var(--accent);
+  border: 1px solid var(--accent);
+  color: #073b2a;
+  border-radius: 8px;
+  padding: 0.6rem 0.9rem;
+}
+
+/* Buttons: default and dark variants */
+.btn,
 button {
-  cursor: pointer;
+  background: var(--btn-bg);
+  color: var(--text-strong);
+  border: 1px solid var(--color-border);
+}
+.dark .btn,
+.dark button {
+  background: #0f172a;
+  color: #f1f5f9;
+  border-color: #334155;
+}
+.dark .btn-primary,
+.dark button.btn-primary {
+  background: var(--accent-strong);
+  border-color: var(--accent-strong);
+  color: #052e22;
 }
 
-input, select, textarea, button {
-  font-size: 1rem;
-  box-sizing: border-box;
+.badge-green {
+  background: var(--accent-weak);
+  color: var(--accent-strong);
+  border-radius: 999px;
+  padding: 0.1rem 0.5rem;
+  font-weight: 700;
+}
+
+/* Ensure dark mode overrides win over :root in this file */
+.dark {
+  --card-bg: #0b1320;
 }

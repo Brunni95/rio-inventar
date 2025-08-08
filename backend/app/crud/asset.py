@@ -6,15 +6,12 @@ from typing import Any, Dict, List, Union
 from pydantic import BaseModel
 
 from app.crud.base import CRUDBase
-from app.models import Asset, AssetLog, User
+from app.models import Asset, AssetLog, User, AssetType, Manufacturer, Location, Status
 from app.schemas import AssetCreate, AssetUpdate
 
 class CRUDAsset(CRUDBase[Asset, AssetCreate, AssetUpdate]):
     # get_multi_with_search, create_with_log, und update_with_log bleiben unverändert...
-    def get_multi_with_search(
-            self, db: Session, *, skip: int = 0, limit: int = 100, search: str | None = None
-    ) -> List[Asset]:
-        # Eager Loading für verbundene Relationen, um N+1 zu vermeiden
+    def _base_query(self, db: Session, *, search: str | None = None):
         query = (
             db.query(self.model)
             .options(
@@ -26,6 +23,10 @@ class CRUDAsset(CRUDBase[Asset, AssetCreate, AssetUpdate]):
                 joinedload(Asset.user),
             )
             .join(User, User.id == self.model.user_id, isouter=True)
+            .join(AssetType, AssetType.id == self.model.asset_type_id, isouter=True)
+            .join(Manufacturer, Manufacturer.id == self.model.manufacturer_id, isouter=True)
+            .join(Location, Location.id == self.model.location_id, isouter=True)
+            .join(Status, Status.id == self.model.status_id, isouter=True)
         )
         if search:
             search_term = f"%{search}%"
@@ -35,10 +36,47 @@ class CRUDAsset(CRUDBase[Asset, AssetCreate, AssetUpdate]):
                     Asset.model.ilike(search_term),
                     Asset.hostname.ilike(search_term),
                     Asset.serial_number.ilike(search_term),
-                    User.display_name.ilike(search_term)
+                    User.display_name.ilike(search_term),
+                    Manufacturer.name.ilike(search_term),
+                    Location.name.ilike(search_term),
                 )
             )
-        return query.order_by(self.model.id.desc()).offset(skip).limit(limit).all()
+        return query
+
+    def get_multi_with_search(
+        self,
+        db: Session,
+        *,
+        skip: int = 0,
+        limit: int = 100,
+        search: str | None = None,
+        order_by: str = "id",
+        order_dir: str = "desc",
+    ) -> List[Asset]:
+        query = self._base_query(db, search=search)
+
+        order_map: dict[str, Any] = {
+            "id": Asset.id,
+            "inventory_number": Asset.inventory_number,
+            "model": Asset.model,
+            "hostname": Asset.hostname,
+            "serial_number": Asset.serial_number,
+            "asset_type.name": AssetType.name,
+            "manufacturer.name": Manufacturer.name,
+            "location.name": Location.name,
+            "status.name": Status.name,
+            "user.display_name": User.display_name,
+        }
+        order_col = order_map.get(order_by, Asset.id)
+        if (order_dir or "").lower() == "asc":
+            query = query.order_by(order_col.asc(), Asset.id.asc())
+        else:
+            query = query.order_by(order_col.desc(), Asset.id.desc())
+
+        return query.offset(skip).limit(limit).all()
+
+    def count_with_search(self, db: Session, *, search: str | None = None) -> int:
+        return self._base_query(db, search=search).count()
 
     def create_with_log(self, db: Session, *, obj_in: AssetCreate, user_id: int) -> Asset:
         db_obj = super().create(db, obj_in=obj_in)

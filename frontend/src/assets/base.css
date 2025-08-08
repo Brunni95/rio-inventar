@@ -34,6 +34,15 @@
   --color-text: var(--vt-c-text-light-1);
 
   --section-gap: 160px;
+
+  /* Green theme + header variables */
+  --accent: #42b883;
+  --accent-strong: #2f9e6e;
+  --accent-weak: #eafaf3;
+  --text-strong: var(--vt-c-text-light-1);
+  --text-muted: var(--vt-c-text-light-2);
+  --header-bg: rgba(255,255,255,0.9);
+  --btn-bg: #ffffff;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -45,9 +54,35 @@
     --color-border: var(--vt-c-divider-dark-2);
     --color-border-hover: var(--vt-c-divider-dark-1);
 
-    --color-heading: var(--vt-c-text-dark-1);
-    --color-text: var(--vt-c-text-dark-2);
+    /* Dark theme counterparts (brighter for better contrast) */
+    --color-heading: #f1f5f9;
+    --color-text: #f1f5f9;
+
+    --text-strong: #f1f5f9; /* near-white */
+    --text-muted: #cbd5e1;  /* slate-300 */
+    --header-bg: rgba(10, 15, 26, 0.8);
+    --btn-bg: #0b1320;
   }
+}
+
+/* Manual dark mode override via <html class="dark"> */
+.dark {
+  --color-background: var(--vt-c-black);
+  --color-background-soft: var(--vt-c-black-soft);
+  --color-background-mute: var(--vt-c-black-mute);
+
+  --color-border: var(--vt-c-divider-dark-2);
+  --color-border-hover: var(--vt-c-divider-dark-1);
+
+  --color-heading: #f1f5f9;
+  --color-text: #f1f5f9;
+
+  /* Theme-specific vars */
+  --text-strong: #f1f5f9;
+  --text-muted: #cbd5e1;
+  --header-bg: rgba(10, 15, 26, 0.8);
+  --btn-bg: #0b1320;
+  --card-bg: #0b1320;
 }
 
 *,

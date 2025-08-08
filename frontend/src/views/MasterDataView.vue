@@ -110,12 +110,12 @@ onMounted(() => {
     <!-- Die Grid-Struktur bleibt unverändert -->
     <div class="grid">
       <div v-for="(config, type) in dataTypes" :key="type" class="card">
-        <h3>{{ config.title }}</h3>
+<h3>{{ config.title }}</h3>
 
         <!-- Das Formular zum Hinzufügen bleibt unverändert -->
         <form @submit.prevent="handleAddItem(type)" class="add-form">
           <input v-model="newItems[type].name" :placeholder="`Neuen ${config.title.slice(0, -1)} hinzufügen...`" required />
-          <button type="submit">+</button>
+<button type="submit" class="btn-primary">+</button>
         </form>
 
         <!-- Die Liste wird um den Löschen-Button erweitert -->
@@ -149,12 +149,13 @@ onMounted(() => {
 }
 
 .card {
-  background-color: #ffffff;
+  background-color: var(--card-bg);
   border-radius: 8px;
   padding: 1.5rem;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
   display: flex;
   flex-direction: column;
+  border: 1px solid var(--color-border);
 }
 
 .card h3 {
@@ -162,7 +163,7 @@ onMounted(() => {
   margin-bottom: 1.5rem;
   border-bottom: 1px solid #eee;
   padding-bottom: 0.75rem;
-  color: #333;
+  color: var(--text-strong);
 }
 
 .add-form {
@@ -207,7 +208,7 @@ onMounted(() => {
   justify-content: space-between;
   align-items: center;
   padding: 0.75rem 0.5rem;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--color-border);
 }
 
 .item-list li:last-child {
