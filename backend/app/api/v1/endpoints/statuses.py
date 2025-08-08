@@ -1,4 +1,4 @@
-﻿# Datei: backend/app/api/v1/endpoints/statuses.py
+﻿"""Status CRUD endpoints."""
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy.orm import Session
 from typing import List
@@ -17,7 +17,13 @@ def read_statuses(
     current_user: models.User = Depends(get_current_active_user)
 ):
     """
-    Ruft eine Liste von statuses ab.
+    Return a list of statuses with pagination.
+
+    Parameters:
+    - db: SQLAlchemy session dependency
+    - skip: Number of items to skip (offset)
+    - limit: Max items to return
+    - current_user: Authenticated user dependency
     """
     items = crud.status.get_multi(db, skip=skip, limit=limit)
     return items
@@ -30,22 +36,34 @@ def create_status(
     current_user: models.User = Depends(get_current_active_user)
 ):
     """
-    Erstellt einen neuen status.
+    Create a new status.
+
+    Parameters:
+    - db: SQLAlchemy session dependency
+    - item_in: Status payload
+    - current_user: Authenticated user dependency
     """
     return crud.status.create(db=db, obj_in=item_in)
 
 @router.delete("/{status_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_status(status_id: int, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_active_user)):
     """
-    Löscht einen status.
+    Delete a status. Returns 409 if any asset references it.
+
+    Parameters:
+    - status_id: Status primary key
+    - db: SQLAlchemy session dependency
+    - current_user: Authenticated user dependency
+
+    Returns:
+    - 204 No Content on success
+
+    Raises:
+    - HTTPException 404: If status does not exist
+    - HTTPException 409: If still referenced by assets
     """
-    # Verhindere Löschen, wenn Assets auf diesen Status verweisen
-    asset_dependency = db.query(models.Asset).filter(models.Asset.status_id == status_id).first()
-    if asset_dependency:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=f"Status mit ID {status_id} ist noch bei einem Asset in Verwendung und kann nicht gelöscht werden."
-        )
+    from app.api.utils import ensure_not_in_use
+    ensure_not_in_use(db, model=models.Asset, fk_column=models.Asset.status_id, fk_id=status_id, entity_label="Status")
 
     db_item = crud.status.remove(db=db, id=status_id)
 

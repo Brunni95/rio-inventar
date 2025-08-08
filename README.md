@@ -1,6 +1,6 @@
 # 🚀 RIO-Inventar
 
-Ein internes Inventar-Management-Tool zur effizienten Verwaltung von Artikeln, Beständen und Standorten.
+Modernes Inventar-Management mit FastAPI (Backend) und Vue 3 (Frontend). Azure AD Login via MSAL, serverseitige Pagination/Sorting, Dashboard-Widgets und QR-Code-Export.
 
 ---
 
@@ -16,9 +16,9 @@ Sie dient zur Verwaltung von Lagerbeständen, Artikelstammdaten und Inventarbewe
 
 ---
 
-## 🏗️ Softwarearchitektur
+## 🏗️ Architektur
 
-Die Anwendung basiert auf einer entkoppelten, skalierbaren Architektur.
+Entkoppelt und skalierbar: FastAPI + SQLAlchemy + Alembic, Vue 3 + Router + Axios.
 
 ## Übersicht (Mermaid-Diagramm)
 
@@ -31,15 +31,16 @@ graph TD
         A4[Pagination-Komponente]
     end
 
-    subgraph API Gateway [Node.js Express API]
-        B1[/search Endpoint]
-        B2[Middleware: Logging & Fehlerbehandlung]
+    subgraph API [FastAPI Backend]
+        B1[/api/v1/assets]
+        B2[Auth: Azure AD JWT (JWKS)]
+        B3[CRUD + Pagination + Sorting]
     end
 
-    subgraph Backend [MongoDB + Services]
-        C1[MongoDB: Artikelsammlung]
-        C2[Suchservice (Query Builder)]
-        C3[Response Mapper]
+    subgraph Backend [PostgreSQL + SQLAlchemy]
+        C1[SQLAlchemy ORM]
+        C2[Alembic Migrations]
+        C3[Seed Script]
     end
 
     A1 --> B1
@@ -54,11 +55,12 @@ graph TD
 
 ## Frontend (Vue.js)
 
-- **Komponentenstruktur**
-    - `SearchInput.vue`: Textfeld mit v-model für Volltextsuche
-    - `SearchFilters.vue`: Kombinierbare Filter wie Kategorie, Autor, Datum
-    - `SearchResults.vue`: Listet Artikel mit Pagination
-    - `Pagination.vue`: Steuerung der Seiten
+- **Komponentenstruktur (Auszug)**
+    - `HeaderLayout.vue`: Navigation, Login/Logout, Dark Mode Toggle
+    - `DashboardView.vue`: KPI-Kacheln, Donut-Chart mit konfigurierbarer Gruppierung
+    - `InventoryView.vue`: Serverseitige Pagination/Sorting, Formular, QR-Export, Historie
+    - `components/Pagination.vue`: Wiederverwendbare Pagination
+    - `components/charts/DonutChart.vue`: Farbstarke SVG-Donuts (HSL, Golden Angle)
 
 - **Zustandsspeicherung**
     - Query-Parameter in der URL (z. B. `?q=test&page=2`)
@@ -66,62 +68,37 @@ graph TD
 
 ---
 
-## Backend (Node.js API + MongoDB)
+## Backend (FastAPI)
 
-- **Express Endpoint `/api/search`**
-    - Nimmt Query-Parameter entgegen (`q`, `filters`, `page`, `limit`)
-    - Validierung und Logging in Middleware
-    - Ruft Suchlogik im Service auf
-
-- **Suchlogik (Query Builder)**
-    - Dynamisch generierte MongoDB-Abfrage mit:
-        - `$text`-Suche für Volltext
-        - Kombinierte Filter mit `$and`, `$or`
-        - `skip` und `limit` für Pagination
-
-- **Response Mapping**
-    - Transformiert Daten in frontend-kompatibles Format
-    - Enthält Trefferanzahl und Meta-Infos für Pagination
+- Endpoints `/api/v1/...` mit Schutz per Azure AD JWT
+- Eager Loading gegen N+1, `skip`/`limit` + `order_by`/`order_dir`
+- Alembic-Migrationen, `seed_db.py` für Demo-Daten
 
 ---
 
 ## Fehlerhandling
-
-- Fehlercodes:
-    - `400`: Ungültige Query-Parameter
-    - `500`: Serverfehler (z. B. bei Mongo-Ausfall)
-
-- Logging via Winston oder einheitliche Middleware
+- Konsistente 400/401/409/500-Responses
+- Logging und zentrale Error-Handler im Backend
 
 ---
 
-## Tests & Qualität
-
-- **Unit Tests**
-    - Für Query Builder und Response Mapper
-- **Integrationstests**
-    - End-to-End-Test über Cypress oder Postman
-- **Performance**
-    - Analyse über `explain()` in MongoDB
-    - Optimierung bei häufigen redundanten Calls
+## Qualität
+- ESLint/Prettier im Frontend, Typhinweise + Pydantic im Backend
 
 ---
 
-## Zustände bei Navigation
-
-- Vue Router speichert Suchstatus (Query-Parameter)
-- "Zurück"-Button stellt Filter und Resultate korrekt wieder her
+## Auth
+- MSAL im Frontend (Popup/Silent), Token via Axios-Interceptor
+- Backend: JWKS-Load, manuelle Audience/Issuer-Validierung
 
 ---
 
-## Technologiestack
+## Stack
 
-| Bereich      | Technologie        |
-|-------------|--------------------|
-| Frontend     | Vue.js 3, Vue Router |
-| Backend      | Node.js, Express    |
-| Datenbank    | MongoDB             |
-| Tests        | Jest, Supertest     |
-| Logging      | Winston             |
+| Bereich   | Technologie                 |
+|-----------|-----------------------------|
+| Frontend  | Vue 3, Vue Router, Axios    |
+| Backend   | FastAPI, SQLAlchemy, Alembic|
+| Datenbank | PostgreSQL                  |
 
 

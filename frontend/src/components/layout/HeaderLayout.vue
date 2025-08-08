@@ -64,22 +64,22 @@ onMounted(() => {
 .app-shell { min-height: 100vh; background: var(--color-background); }
 .header {
   position: sticky; top: 0; z-index: 10;
-  backdrop-filter: blur(8px);
-  background: var(--header-bg);
-  border-bottom: 1px solid var(--border-color);
+  background: var(--accent);
+  border-bottom: 1px solid var(--accent-strong);
 }
+.dark .header { background: var(--accent-strong); border-bottom-color: var(--accent); }
 .header-row { display: flex; align-items: center; justify-content: space-between; height: 64px; }
-.logo { text-decoration: none; color: var(--text-strong); font-weight: 800; letter-spacing: 0.2px; }
+.logo { text-decoration: none; color: #ffffff; font-weight: 800; letter-spacing: 0.2px; }
 .nav { display: flex; gap: 1rem; }
-.nav a { color: var(--text-muted); text-decoration: none; padding: 0.5rem 0.25rem; border-bottom: 2px solid transparent; }
-.nav a:hover { color: var(--accent-strong); }
-.nav a.active { color: var(--accent-strong); border-bottom-color: var(--accent); }
+.nav a { color: rgba(255,255,255,0.9); text-decoration: none; padding: 0.5rem 0.25rem; border-bottom: 2px solid transparent; }
+.nav a:hover { color: #ffffff; border-bottom-color: rgba(255,255,255,0.35); }
+.nav a.active { color: #ffffff; border-bottom-color: #ffffff; }
 .actions { display: flex; align-items: center; gap: 0.75rem; }
 .user { display: flex; align-items: center; gap: 0.5rem; }
-.name { color: var(--text-muted); }
-.btn { border: 1px solid var(--border-color); background: var(--btn-bg); color: var(--text-strong); padding: 0.45rem 0.75rem; border-radius: 8px; cursor: pointer; }
-.btn:hover { border-color: var(--accent); }
-.btn.primary { background: var(--accent); border-color: var(--accent); color: #0b3325; font-weight: 700; }
+.name { color: rgba(255,255,255,0.9); }
+.btn { border: 1px solid rgba(255,255,255,0.35); background: rgba(255,255,255,0.12); color: #ffffff; padding: 0.45rem 0.75rem; border-radius: 6px; cursor: pointer; }
+.btn:hover { background: rgba(255,255,255,0.2); border-color: rgba(255,255,255,0.6); }
+.btn.primary { background: #ffffff; border-color: #ffffff; color: #063523; font-weight: 700; }
 .btn.ghost { background: transparent; }
 .content { padding-top: 1.25rem; padding-bottom: 2rem; }
 </style>

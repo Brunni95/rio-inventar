@@ -1,11 +1,10 @@
-# Datei: backend/app/crud/base.py
+"""Generic CRUD base with typed helpers for SQLAlchemy models and Pydantic schemas."""
 
 from typing import Any, Dict, Generic, List, Optional, Type, TypeVar, Union
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
-from app.db.session import Base  # Wichtig für die Modell-Typisierung
+from app.db.session import Base  # for typing of bound models
 
-# Diese TypeVars ermöglichen es uns, generische Klassen zu erstellen.
 ModelType = TypeVar("ModelType", bound=Base)
 CreateSchemaType = TypeVar("CreateSchemaType", bound=BaseModel)
 UpdateSchemaType = TypeVar("UpdateSchemaType", bound=BaseModel)
@@ -21,7 +20,7 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         self.model = model
 
     def get(self, db: Session, id: Any) -> Optional[ModelType]:
-        # SQLAlchemy 2.0: nutze Session.get für Primärschlüssel-Lookups
+        # SQLAlchemy 2.0: prefer Session.get for primary key lookups
         return db.get(self.model, id)
 
     def get_multi(
@@ -30,9 +29,9 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         return db.query(self.model).offset(skip).limit(limit).all()
 
     def create(self, db: Session, *, obj_in: CreateSchemaType) -> ModelType:
-        # Konvertiere das Pydantic-Schema in ein Dictionary
+        # Convert Pydantic schema to dict
         obj_in_data = obj_in.model_dump()
-        # Erstelle eine Instanz des SQLAlchemy-Modells
+        # Create SQLAlchemy model instance
         db_obj = self.model(**obj_in_data)
         db.add(db_obj)
         db.commit()
@@ -46,17 +45,17 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         db_obj: ModelType,
         obj_in: Union[UpdateSchemaType, Dict[str, Any]]
     ) -> ModelType:
-        # Nur explizit gesetzte Felder aktualisieren und primären Schlüssel ignorieren
+        # Update only explicitly set fields and ignore primary key
         if isinstance(obj_in, dict):
             update_data = obj_in
         else:
             update_data = obj_in.model_dump(exclude_unset=True)
 
-        # Verhindere versehentliches Überschreiben der Primärschlüssel-ID
+        # Prevent accidental overwrite of primary key
         update_data.pop("id", None)
 
         for field_name, field_value in update_data.items():
-            # Setze nur existierende Attribute
+            # Only set attributes that actually exist on the model
             if hasattr(db_obj, field_name):
                 setattr(db_obj, field_name, field_value)
 
@@ -66,7 +65,7 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         return db_obj
 
     def remove(self, db: Session, *, id: int) -> Optional[ModelType]:
-        # SQLAlchemy 2.0: Session.get, None-handling
+        # SQLAlchemy 2.0: Session.get with None-handling
         obj = db.get(self.model, id)
         if obj is None:
             return None

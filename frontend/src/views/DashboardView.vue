@@ -15,6 +15,19 @@ const stats = ref({
 
 const assetsAll = ref([]);
 
+const avgPrice = () => {
+  const list = Array.isArray(assetsAll.value) ? assetsAll.value : [];
+  if (list.length === 0) return '–';
+  const sum = list.reduce((s, a) => s + (Number(a.purchase_price) || 0), 0);
+  const avg = sum / list.length;
+  return new Intl.NumberFormat('de-CH', { style: 'currency', currency: 'CHF' }).format(avg);
+};
+
+const withUserCount = () => {
+  const list = Array.isArray(assetsAll.value) ? assetsAll.value : [];
+  return list.filter(a => !!a.user).length;
+};
+
 const groupOptions = [
   { value: 'asset_type.name', label: 'Gerätetyp' },
   { value: 'location.name', label: 'Standort' },
@@ -43,7 +56,7 @@ const groupedList = computed(() => {
 
 const fetchStats = async () => {
   try {
-    // Minimaler Ansatz: wir laden Assets und aggregieren clientseitig
+    // Load assets and aggregate client-side for the dashboard widgets
     const res = await api.get('/api/v1/assets/?limit=1000');
     const items = Array.isArray(res.data?.items)
       ? res.data.items
@@ -115,6 +128,16 @@ onMounted(fetchStats);
             <router-link to="/inventory" class="btn primary">Neues Asset</router-link>
             <router-link to="/master-data" class="btn">Stammdaten pflegen</router-link>
           </div>
+          <div class="quick-stats">
+            <div class="stat">
+              <div class="lbl">Ø Kaufpreis</div>
+              <div class="val">{{ avgPrice() }}</div>
+            </div>
+            <div class="stat">
+              <div class="lbl">Geräte mit Benutzer</div>
+              <div class="val">{{ withUserCount() }}</div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -145,9 +168,8 @@ h2 { margin: 0 0 1rem; }
 .kpi-card {
   background: var(--card-bg);
   border: 1px solid var(--color-border);
-  border-radius: 10px;
+  border-radius: 8px;
   padding: 1rem 1.25rem;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.04);
 }
 .kpi-value { font-size: 2rem; font-weight: 800; color: var(--text-strong); }
 .kpi-label { color: var(--text-muted); }
@@ -161,7 +183,7 @@ h2 { margin: 0 0 1rem; }
 .widget {
   background: var(--card-bg);
   border: 1px solid var(--color-border);
-  border-radius: 10px;
+  border-radius: 8px;
   padding: 1rem 1.25rem;
 }
 .widget-head { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; margin-bottom: 0.5rem; }
@@ -182,6 +204,11 @@ h2 { margin: 0 0 1rem; }
   padding: 0.6rem 0.9rem; border-radius: 8px; border: 1px solid var(--color-border);
 }
 .btn.primary { background: var(--accent); color: #063523; border-color: var(--accent); }
+
+.quick-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-top: 0.75rem; }
+.stat { border: 1px solid var(--color-border); border-radius: 8px; padding: 0.6rem; }
+.stat .lbl { color: var(--text-muted); font-size: 0.9rem; }
+.stat .val { color: var(--text-strong); font-weight: 800; }
 </style>
 
 

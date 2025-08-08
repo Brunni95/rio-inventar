@@ -2,11 +2,12 @@
 import { ref, onMounted, watch } from 'vue';
 import api from '../api';
 import { getAccount } from '../authService';
+import AssetQrButton from '../components/qr/AssetQrButton.vue';
+import Pagination from '../components/Pagination.vue';
+import { useApiList } from '../composables/useApiList';
 
-// --- Refs für die Daten ---
-const assets = ref([]);
-const total = ref(0);
-const errorMessage = ref('');
+// Central list state via composable (server-side pagination + sorting)
+const { items: assets, total, error: errorMessage, search: searchQuery, sortBy, sortDir, page, pageSize, fetchList: fetchAssets } = useApiList('/api/v1/assets/');
 const editingAsset = ref(null);
 const locations = ref([]);
 const manufacturers = ref([]);
@@ -20,11 +21,6 @@ const selectedAssetForHistory = ref(null);
 const assetHistory = ref([]);
 const isLoadingHistory = ref(false);
 
-const searchQuery = ref('');
-const sortBy = ref('id');
-const sortDir = ref('desc');
-const page = ref(1);
-const pageSize = ref(10);
 let debounceTimer = null;
 
 const newAssetForm = ref({
@@ -43,29 +39,7 @@ watch(searchQuery, () => {
   }, 300);
 });
 
-const fetchAssets = async () => {
-  try {
-    const params = new URLSearchParams();
-    if (searchQuery.value) params.append('search', searchQuery.value);
-    params.append('order_by', sortBy.value);
-    params.append('order_dir', sortDir.value);
-    // Serverseitige Pagination
-    params.append('skip', String((page.value - 1) * pageSize.value));
-    params.append('limit', String(pageSize.value));
-    const response = await api.get(`/api/v1/assets/?${params.toString()}`);
-    assets.value = response.data.items;
-    total.value = response.data.total;
-  } catch (error) {
-    errorMessage.value = 'Asset-Daten konnten nicht geladen werden.';
-    console.error(error);
-  }
-};
-const pagedAssets = () => assets.value; // serverseitig paginiert
 const totalPages = () => Math.max(1, Math.ceil(total.value / pageSize.value));
-
-const getValue = (obj, path) => {
-  return path.split('.').reduce((acc, key) => (acc ? acc[key] : undefined), obj);
-};
 
 const changeSort = (key) => {
   if (sortBy.value === key) {
@@ -78,14 +52,10 @@ const changeSort = (key) => {
   fetchAssets();
 };
 
-const goToPage = (p) => {
-  const tp = totalPages();
-  if (p < 1) p = 1;
-  if (p > tp) p = tp;
-  if (p === page.value) return;
-  page.value = p;
+// Refetch when page or page size changes (Pagination component emits updates)
+watch([page, pageSize], () => {
   fetchAssets();
-};
+});
 
 
 const fetchDropdownData = async () => {
@@ -259,7 +229,7 @@ onMounted(async () => {
         </tr>
         </thead>
         <tbody>
-        <tr v-for="asset in pagedAssets()" :key="asset.id">
+        <tr v-for="asset in assets" :key="asset.id">
           <td>{{ asset.inventory_number }}</td>
           <td>{{ asset.asset_type.name }}</td>
           <td>{{ asset.manufacturer.name }} {{ asset.model }}</td>
@@ -271,26 +241,13 @@ onMounted(async () => {
             <button @click="deleteAsset(asset.id)" title="Löschen">🗑️</button>
             <!-- NEU: Button für die Historie -->
             <button @click="showHistory(asset)" title="Historie anzeigen">📜</button>
+            <AssetQrButton :asset-id="asset.id" :inventory-number="asset.inventory_number" />
           </td>
         </tr>
         </tbody>
       </table>
       <p v-else>Keine Assets gefunden.</p>
-      <div class="pagination" v-if="total > pageSize">
-        <button type="button" :disabled="page===1" @click="goToPage(1)">« Erste</button>
-        <button type="button" :disabled="page===1" @click="goToPage(page-1)">‹ Zurück</button>
-        <span>Seite {{ page }} / {{ totalPages() }} ({{ total }} Einträge)</span>
-        <button type="button" :disabled="page===totalPages()" @click="goToPage(page+1)">Weiter ›</button>
-        <button type="button" :disabled="page===totalPages()" @click="goToPage(totalPages())">Letzte »</button>
-        <label class="page-size">
-          Pro Seite:
-          <select v-model.number="pageSize" @change="page=1; fetchAssets()">
-            <option :value="10">10</option>
-            <option :value="25">25</option>
-            <option :value="50">50</option>
-          </select>
-        </label>
-      </div>
+      <Pagination v-model:page="page" v-model:page-size="pageSize" :total="total" />
     </section>
 
     <!-- NEU: Das Modal-Fenster für die Historie -->
@@ -320,7 +277,7 @@ onMounted(async () => {
 <style scoped>
 /* Der meiste Style bleibt unverändert */
 .inventory-container { display: flex; flex-direction: column; gap: 2rem; }
-.card { background-color: var(--card-bg); border-radius: 8px; padding: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+.card { background-color: var(--card-bg); border-radius: 8px; padding: 1.5rem; box-shadow: none; border: 1px solid var(--color-border); }
 .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem; margin-bottom: 1rem; }
 textarea { width: 100%; min-height: 80px; margin-bottom: 1rem; }
 .form-actions { display: flex; gap: 1rem; }

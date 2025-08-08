@@ -1,4 +1,4 @@
-﻿# Datei: backend/app/api/v1/endpoints/asset_types.py
+﻿"""AssetType CRUD endpoints."""
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy.orm import Session
 from typing import List
@@ -17,7 +17,13 @@ def read_asset_types(
     current_user: models.User = Depends(get_current_active_user)
 ):
     """
-    Ruft eine Liste von asset-types ab.
+    Return a list of asset types with pagination.
+
+    Parameters:
+    - db: SQLAlchemy session dependency
+    - skip: Number of items to skip (offset)
+    - limit: Max items to return
+    - current_user: Authenticated user dependency
     """
     items = crud.asset_type.get_multi(db, skip=skip, limit=limit)
     return items
@@ -30,22 +36,34 @@ def create_asset_type(
     current_user: models.User = Depends(get_current_active_user)
 ):
     """
-    Erstellt einen neuen asset_type.
+    Create a new asset type.
+
+    Parameters:
+    - db: SQLAlchemy session dependency
+    - item_in: AssetType payload
+    - current_user: Authenticated user dependency
     """
     return crud.asset_type.create(db=db, obj_in=item_in)
 
 @router.delete("/{asset_type_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_asset_type(asset_type_id: int, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_active_user)):
     """
-    Löscht einen asset_type.
+    Delete an asset type. Returns 409 if any asset references it.
+
+    Parameters:
+    - asset_type_id: AssetType primary key
+    - db: SQLAlchemy session dependency
+    - current_user: Authenticated user dependency
+
+    Returns:
+    - 204 No Content on success
+
+    Raises:
+    - HTTPException 404: If asset type does not exist
+    - HTTPException 409: If still referenced by assets
     """
-    # Verhindere Löschen, wenn Assets auf diesen AssetType verweisen
-    asset_dependency = db.query(models.Asset).filter(models.Asset.asset_type_id == asset_type_id).first()
-    if asset_dependency:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=f"AssetType mit ID {asset_type_id} ist noch bei einem Asset in Verwendung und kann nicht gelöscht werden."
-        )
+    from app.api.utils import ensure_not_in_use
+    ensure_not_in_use(db, model=models.Asset, fk_column=models.Asset.asset_type_id, fk_id=asset_type_id, entity_label="AssetType")
 
     db_item = crud.asset_type.remove(db=db, id=asset_type_id)
 

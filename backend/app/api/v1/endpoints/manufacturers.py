@@ -1,4 +1,4 @@
-﻿# Datei: backend/app/api/v1/endpoints/manufacturers.py
+﻿"""Manufacturer CRUD endpoints."""
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy.orm import Session
 from typing import List
@@ -17,7 +17,13 @@ def read_manufacturers(
     current_user: models.User = Depends(get_current_active_user)
 ):
     """
-    Ruft eine Liste von manufacturers ab.
+    Return a list of manufacturers with pagination.
+
+    Parameters:
+    - db: SQLAlchemy session dependency
+    - skip: Number of items to skip (offset)
+    - limit: Max items to return
+    - current_user: Authenticated user dependency
     """
     items = crud.manufacturer.get_multi(db, skip=skip, limit=limit)
     return items
@@ -30,22 +36,34 @@ def create_manufacturer(
     current_user: models.User = Depends(get_current_active_user)
 ):
     """
-    Erstellt einen neuen manufacturer.
+    Create a new manufacturer.
+
+    Parameters:
+    - db: SQLAlchemy session dependency
+    - item_in: Manufacturer payload
+    - current_user: Authenticated user dependency
     """
     return crud.manufacturer.create(db=db, obj_in=item_in)
 
 @router.delete("/{manufacturer_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_manufacturer(manufacturer_id: int, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_active_user)):
     """
-    Löscht einen manufacturer.
+    Delete a manufacturer. Returns 409 if any asset references it.
+
+    Parameters:
+    - manufacturer_id: Manufacturer primary key
+    - db: SQLAlchemy session dependency
+    - current_user: Authenticated user dependency
+
+    Returns:
+    - 204 No Content on success
+
+    Raises:
+    - HTTPException 404: If manufacturer does not exist
+    - HTTPException 409: If still referenced by assets
     """
-    # Verhindere Löschen, wenn Assets auf diesen Hersteller verweisen
-    asset_dependency = db.query(models.Asset).filter(models.Asset.manufacturer_id == manufacturer_id).first()
-    if asset_dependency:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=f"Manufacturer mit ID {manufacturer_id} ist noch bei einem Asset in Verwendung und kann nicht gelöscht werden."
-        )
+    from app.api.utils import ensure_not_in_use
+    ensure_not_in_use(db, model=models.Asset, fk_column=models.Asset.manufacturer_id, fk_id=manufacturer_id, entity_label="Manufacturer")
 
     db_item = crud.manufacturer.remove(db=db, id=manufacturer_id)
 

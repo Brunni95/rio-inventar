@@ -18,7 +18,8 @@
   --accent: #42b883;
   --accent-strong: #2f9e6e;
   --accent-weak: #eafaf3;
-  --card-bg: #ffffff;
+  /* In Light Mode heben wir Cards leicht vom Seitenhintergrund ab */
+  --card-bg: var(--color-background-soft);
 }
 
 a { color: var(--accent-strong); }
@@ -27,16 +28,16 @@ a:hover { color: var(--accent); }
 .card {
   background: var(--card-bg);
   border: 1px solid var(--color-border);
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  border-radius: 8px;
+  box-shadow: none; /* Flat design */
 }
 
 .btn-primary {
   background: var(--accent);
   border: 1px solid var(--accent);
   color: #073b2a;
-  border-radius: 8px;
-  padding: 0.6rem 0.9rem;
+  border-radius: 6px;
+  padding: 0.55rem 0.85rem;
 }
 
 /* Buttons: default and dark variants */

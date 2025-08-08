@@ -1,4 +1,4 @@
-﻿# Datei: backend/app/api/v1/endpoints/users.py
+﻿"""User CRUD endpoints."""
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy.orm import Session
 from typing import List
@@ -17,7 +17,13 @@ def read_users(
     current_user: models.User = Depends(get_current_active_user)
 ):
     """
-    Ruft eine Liste von users ab.
+    Return a list of users with pagination.
+
+    Parameters:
+    - db: SQLAlchemy session dependency
+    - skip: Number of items to skip (offset)
+    - limit: Max items to return
+    - current_user: Authenticated user dependency
     """
     items = crud.user.get_multi(db, skip=skip, limit=limit)
     return items
@@ -30,22 +36,34 @@ def create_user(
     current_user: models.User = Depends(get_current_active_user)
 ):
     """
-    Erstellt einen neuen user.
+    Create a new user.
+
+    Parameters:
+    - db: SQLAlchemy session dependency
+    - item_in: User payload
+    - current_user: Authenticated user dependency
     """
     return crud.user.create(db=db, obj_in=item_in)
 
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_user(user_id: int, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_active_user)):
     """
-    Löscht einen user.
+    Delete a user. Returns 409 if any asset references them.
+
+    Parameters:
+    - user_id: User primary key
+    - db: SQLAlchemy session dependency
+    - current_user: Authenticated user dependency
+
+    Returns:
+    - 204 No Content on success
+
+    Raises:
+    - HTTPException 404: If user does not exist
+    - HTTPException 409: If still referenced by assets
     """
-    # Verhindere Löschen, wenn dem Benutzer noch Assets zugewiesen sind
-    asset_dependency = db.query(models.Asset).filter(models.Asset.user_id == user_id).first()
-    if asset_dependency:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=f"User mit ID {user_id} ist noch bei einem Asset in Verwendung und kann nicht gelöscht werden."
-        )
+    from app.api.utils import ensure_not_in_use
+    ensure_not_in_use(db, model=models.Asset, fk_column=models.Asset.user_id, fk_id=user_id, entity_label="User")
 
     db_item = crud.user.remove(db=db, id=user_id)
 

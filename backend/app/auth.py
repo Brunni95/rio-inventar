@@ -1,4 +1,4 @@
-# backend/app/auth.py
+"""JWT-based auth with Azure AD (MSAL) validation and optional dev bypass."""
 import os
 import httpx
 import asyncio
@@ -57,7 +57,7 @@ def _get_key_for_kid(kid: str) -> Optional[Dict[str, str]]:
     return None
 
 def _rsa_public_key_from_jwk(jwk: Dict[str, str]):
-    # jose kann JWK direkt verwenden; wir reichen das JWK einfach durch.
+    # jose can use JWK directly; pass it through
     return jwk
 
 async def _ensure_jwks_loaded():
@@ -70,9 +70,9 @@ async def get_current_active_user(
         db: Session = Depends(get_db),
         token: str = Depends(OAUTH2_SCHEME),
 ):
-    # Dev-Bypass
+    # Dev bypass
     if DISABLE_AUTH:
-        # Dummy-User lokal anlegen/holen
+        # Create/get a local dummy user for development
         dummy_oid = "00000000-0000-0000-0000-000000000000"
         user = crud.user.get_user_by_azure_oid(db, azure_oid=dummy_oid)
         if not user:
@@ -97,15 +97,15 @@ async def get_current_active_user(
 
         jwk = _get_key_for_kid(kid)
         if not jwk:
-            # Keys gedreht? Neu laden und nochmals versuchen
+            # Key rollover? Reload JWKS and retry
             await load_jwks()
             jwk = _get_key_for_kid(kid)
             if not jwk:
                 raise HTTPException(status_code=401, detail="Signing key not found.")
 
         public_key = _rsa_public_key_from_jwk(jwk)
-        # Einige Versionen von python-jose erwarten hier einen String statt Liste.
-        # Wir deaktivieren daher die eingebaute Audience-Prüfung und validieren danach manuell.
+        # Some python-jose versions expect a string for audience.
+        # Disable built-in aud validation and validate manually.
         payload = jwt.decode(
             token,
             public_key,
@@ -113,7 +113,7 @@ async def get_current_active_user(
             options={"verify_aud": False, "verify_iss": False},
         )
 
-        # Manuelle Audience-Validierung gegen erlaubte Werte
+        # Manual audience validation against allowed values
         allowed_audiences = set()
         if AZURE_CLIENT_ID:
             allowed_audiences.add(AZURE_CLIENT_ID)
@@ -131,11 +131,11 @@ async def get_current_active_user(
                 logger.warning("Invalid audience. aud=%s allowed=%s", aud_claim, list(allowed_audiences))
                 raise HTTPException(status_code=401, detail="Invalid audience.")
 
-        # Manuelle Issuer-Validierung: bevorzuge den Wert aus OpenID-Konfiguration
+        # Manual issuer validation: prefer issuer from OpenID configuration
         iss_claim = payload.get("iss")
         expected_issuer = _OPENID_ISSUER or ISSUER
         if expected_issuer and iss_claim != expected_issuer:
-            # Fallback: akzeptiere Varianten pro Tenant und gängige Azure-Domains
+            # Fallback: accept known tenant variants/domains
             tid = payload.get("tid")
             issuer_ok = False
             if isinstance(tid, str) and tid:
@@ -148,7 +148,7 @@ async def get_current_active_user(
                 suffixes = [f"/{tid}/v2.0", f"/{tid}/", f"/{tid}"]
                 candidates = {d + s for d in domains for s in suffixes}
                 issuer_ok = iss_claim in candidates
-                # Zusätzlich: akzeptiere Issuer-Mismatch, wenn Tenant-ID passt
+                # Additionally: tolerate issuer mismatch when tenant-id matches
                 if not issuer_ok and AZURE_TENANT_ID and tid == AZURE_TENANT_ID:
                     issuer_ok = True
             if not issuer_ok:
@@ -164,7 +164,7 @@ async def get_current_active_user(
         if not azure_oid:
             raise HTTPException(status_code=401, detail="OID claim missing.")
 
-        # User sync
+        # User sync (create on first login)
         user = crud.user.get_user_by_azure_oid(db, azure_oid=azure_oid)
         if not user:
             email_claim = (

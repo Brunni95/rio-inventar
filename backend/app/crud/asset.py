@@ -1,4 +1,4 @@
-# Datei: backend/app/crud/asset.py
+"""Asset CRUD with search, sorting, pagination and change logging."""
 
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import or_
@@ -116,23 +116,16 @@ class CRUDAsset(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         db.refresh(updated_obj)
         return updated_obj
 
-    # ==========================================================
-    # HIER IST DIE NEUE, ÜBERSCHRIEBENE METHODE
-    # ==========================================================
     def remove(self, db: Session, *, id: int) -> Asset:
-        """
-        Löscht ein Asset und alle dazugehörigen Log-Einträge.
-        """
-        # Finde zuerst das Objekt, das wir löschen wollen
+        """Delete an asset and all its dependent log entries."""
         db_obj = db.query(self.model).get(id)
         if db_obj:
-            # Lösche ZUERST alle abhängigen Log-Einträge
+            # Delete dependent logs first
             db.query(AssetLog).filter(AssetLog.asset_id == id).delete(synchronize_session=False)
-
-            # Lösche DANN das Asset selbst
+            # Then delete the asset itself
             db.delete(db_obj)
             db.commit()
         return db_obj
 
-# Die Instanz bleibt gleich
+# Export instance used across the app
 asset = CRUDAsset(Asset)

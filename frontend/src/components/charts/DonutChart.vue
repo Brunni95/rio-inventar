@@ -27,8 +27,8 @@ const colorFor = (label, idx) => {
   const GOLDEN_ANGLE = 137.508;
   const base = hashString(label ?? idx) % 360;
   const hue = (base + idx * GOLDEN_ANGLE) % 360;
-  const saturation = 78; // kräftig, aber nicht neon
-  const lightness = 55;  // gute Sichtbarkeit in Light/Dark
+  const saturation = 78; // vibrant, not neon
+  const lightness = 55;  // visible in light/dark themes
   return `hsl(${hue} ${saturation}% ${lightness}%)`;
 };
 

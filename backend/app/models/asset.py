@@ -14,14 +14,14 @@ class Asset(Base):
     installation_date = Column(Date)
     warranty_expiry = Column(Date)
     purchase_date = Column(Date)
-    purchase_price = Column(Numeric(10, 2)) # NEU: Kaufpreis
+    purchase_price = Column(Numeric(10, 2))
     notes = Column(Text)
     ip_address = Column(String)
     hostname = Column(String)
     mac_address = Column(String)
-    room = Column(String)  # NEU: Raum/Zimmer
+    room = Column(String)
 
-    # --- Beziehungen (Foreign Keys) ---
+    # Foreign keys
     user_id = Column(Integer, ForeignKey("users.id")) # GE�NDERT: von assigned_to zu user_id
     asset_type_id = Column(Integer, ForeignKey("asset_types.id"))
     manufacturer_id = Column(Integer, ForeignKey("manufacturers.id"))
@@ -30,7 +30,7 @@ class Asset(Base):
     supplier_id = Column(Integer, ForeignKey("suppliers.id"))
 
     # --- Navigation Properties f�r einfachen Zugriff ---
-    user = relationship("User") # NEU
+    user = relationship("User")
     asset_type = relationship("AssetType")
     manufacturer = relationship("Manufacturer")
     status = relationship("Status")

@@ -1,4 +1,4 @@
-﻿# Datei: backend/app/api/v1/endpoints/suppliers.py
+﻿"""Supplier CRUD endpoints."""
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy.orm import Session
 from typing import List
@@ -17,7 +17,13 @@ def read_suppliers(
     current_user: models.User = Depends(get_current_active_user)
 ):
     """
-    Ruft eine Liste von suppliers ab.
+    Return a list of suppliers with pagination.
+
+    Parameters:
+    - db: SQLAlchemy session dependency
+    - skip: Number of items to skip (offset)
+    - limit: Max items to return
+    - current_user: Authenticated user dependency
     """
     items = crud.supplier.get_multi(db, skip=skip, limit=limit)
     return items
@@ -30,22 +36,34 @@ def create_supplier(
     current_user: models.User = Depends(get_current_active_user)
 ):
     """
-    Erstellt einen neuen supplier.
+    Create a new supplier.
+
+    Parameters:
+    - db: SQLAlchemy session dependency
+    - item_in: Supplier payload
+    - current_user: Authenticated user dependency
     """
     return crud.supplier.create(db=db, obj_in=item_in)
 
 @router.delete("/{supplier_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_supplier(supplier_id: int, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_active_user)):
     """
-    Löscht einen supplier.
+    Delete a supplier. Returns 409 if any asset references it.
+
+    Parameters:
+    - supplier_id: Supplier primary key
+    - db: SQLAlchemy session dependency
+    - current_user: Authenticated user dependency
+
+    Returns:
+    - 204 No Content on success
+
+    Raises:
+    - HTTPException 404: If supplier does not exist
+    - HTTPException 409: If still referenced by assets
     """
-    # Verhindere Löschen, wenn Assets auf diesen Lieferanten verweisen
-    asset_dependency = db.query(models.Asset).filter(models.Asset.supplier_id == supplier_id).first()
-    if asset_dependency:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=f"Supplier mit ID {supplier_id} ist noch bei einem Asset in Verwendung und kann nicht gelöscht werden."
-        )
+    from app.api.utils import ensure_not_in_use
+    ensure_not_in_use(db, model=models.Asset, fk_column=models.Asset.supplier_id, fk_id=supplier_id, entity_label="Supplier")
 
     db_item = crud.supplier.remove(db=db, id=supplier_id)
 
