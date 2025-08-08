@@ -1,12 +1,15 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import DashboardView from '../views/DashboardView.vue';
 import InventoryView from '../views/InventoryView.vue';
+import AssetCreateView from '../views/AssetCreateView.vue';
 import MasterDataView from '../views/MasterDataView.vue';
 import { getAccount, login } from '../authService';
 
 const routes = [
   { path: '/', name: 'Dashboard', component: DashboardView, meta: { requiresAuth: true } },
   { path: '/inventory', name: 'Inventory', component: InventoryView, meta: { requiresAuth: true } },
+  { path: '/assets/new', name: 'AssetCreate', component: AssetCreateView, meta: { requiresAuth: true } },
+  { path: '/assets/:id/edit', name: 'AssetEdit', component: AssetCreateView, meta: { requiresAuth: true } },
   {
     path: '/master-data',
     name: 'MasterData',

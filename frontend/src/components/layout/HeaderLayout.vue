@@ -38,7 +38,12 @@ onMounted(() => {
         </div>
         <nav class="nav">
           <router-link to="/" exact-active-class="active">Dashboard</router-link>
-          <router-link to="/inventory" exact-active-class="active">Inventar</router-link>
+          <div class="nav-group">
+            <router-link to="/inventory" exact-active-class="active">Inventar</router-link>
+            <div class="dropdown">
+              <router-link to="/assets/new" exact-active-class="active">Neues Asset</router-link>
+            </div>
+          </div>
           <router-link to="/master-data" exact-active-class="active">Stammdaten</router-link>
         </nav>
         <div class="actions">
@@ -70,7 +75,12 @@ onMounted(() => {
 .dark .header { background: var(--accent-strong); border-bottom-color: var(--accent); }
 .header-row { display: flex; align-items: center; justify-content: space-between; height: 64px; }
 .logo { text-decoration: none; color: #ffffff; font-weight: 800; letter-spacing: 0.2px; }
-.nav { display: flex; gap: 1rem; }
+.nav { display: flex; gap: 1rem; align-items: center; }
+.nav-group { position: relative; display: flex; align-items: center; }
+.nav-group .dropdown { display: none; position: absolute; top: 32px; left: 0; background: var(--header-bg); backdrop-filter: blur(8px); border: 1px solid var(--color-border); border-radius: 8px; padding: 0.35rem 0.5rem; }
+.nav-group:hover .dropdown { display: block; }
+.nav-group .dropdown a { display: block; color: var(--text-strong); padding: 0.35rem 0.5rem; border-bottom: 1px solid transparent; }
+.nav-group .dropdown a:hover { border-bottom-color: var(--color-border); }
 .nav a { color: rgba(255,255,255,0.9); text-decoration: none; padding: 0.5rem 0.25rem; border-bottom: 2px solid transparent; }
 .nav a:hover { color: #ffffff; border-bottom-color: rgba(255,255,255,0.35); }
 .nav a.active { color: #ffffff; border-bottom-color: #ffffff; }

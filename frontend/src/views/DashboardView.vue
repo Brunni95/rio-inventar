@@ -125,7 +125,7 @@ onMounted(fetchStats);
         <div class="widget">
           <h3>Schnellaktionen</h3>
           <div class="actions">
-            <router-link to="/inventory" class="btn primary">Neues Asset</router-link>
+            <router-link to="/assets/new" class="btn primary">Neues Asset</router-link>
             <router-link to="/master-data" class="btn">Stammdaten pflegen</router-link>
           </div>
           <div class="quick-stats">

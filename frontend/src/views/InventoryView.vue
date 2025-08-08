@@ -1,5 +1,6 @@
 <script setup>
 import { ref, onMounted, watch } from 'vue';
+import { useRouter } from 'vue-router';
 import api from '../api';
 import { getAccount } from '../authService';
 import AssetQrButton from '../components/qr/AssetQrButton.vue';
@@ -8,6 +9,7 @@ import { useApiList } from '../composables/useApiList';
 
 // Central list state via composable (server-side pagination + sorting)
 const { items: assets, total, error: errorMessage, search: searchQuery, sortBy, sortDir, page, pageSize, fetchList: fetchAssets } = useApiList('/api/v1/assets/');
+const router = useRouter();
 const editingAsset = ref(null);
 const locations = ref([]);
 const manufacturers = ref([]);
@@ -128,18 +130,7 @@ const deleteAsset = async (assetId) => {
 };
 
 const startEdit = (asset) => {
-  window.scrollTo({ top: 0, behavior: 'smooth' });
-  editingAsset.value = asset;
-  newAssetForm.value = {
-    ...asset,
-    asset_type_id: asset.asset_type.id,
-    manufacturer_id: asset.manufacturer.id,
-    status_id: asset.status.id,
-    location_id: asset.location.id,
-    supplier_id: asset.supplier?.id,
-    user_id: asset.user?.id,
-    room: asset.room || '',
-  };
+  router.push({ name: 'AssetEdit', params: { id: asset.id } });
 };
 
 const resetForm = () => {
@@ -163,48 +154,7 @@ onMounted(async () => {
 
 <template>
   <div class="inventory-container">
-    <section class="card">
-      <h2>{{ editingAsset ? 'Asset bearbeiten' : 'Neues Asset hinzufügen' }}</h2>
-      <form @submit.prevent="handleSubmit">
-        <!-- Das Formular bleibt unverändert -->
-        <div class="form-grid">
-          <input v-model="newAssetForm.inventory_number" placeholder="Inventarnummer *" required />
-          <select v-model="newAssetForm.asset_type_id" required>
-            <option :value="null" disabled>Geräte-Typ wählen... *</option>
-            <option v-for="type in assetTypes" :key="type.id" :value="type.id">{{ type.name }}</option>
-          </select>
-          <select v-model="newAssetForm.manufacturer_id" required>
-            <option :value="null" disabled>Hersteller wählen... *</option>
-            <option v-for="man in manufacturers" :key="man.id" :value="man.id">{{ man.name }}</option>
-          </select>
-          <input v-model="newAssetForm.model" placeholder="Modell" />
-          <input v-model="newAssetForm.serial_number" placeholder="Seriennummer" />
-          <select v-model="newAssetForm.status_id" required>
-            <option :value="null" disabled>Status wählen... *</option>
-            <option v-for="stat in statuses" :key="stat.id" :value="stat.id">{{ stat.name }}</option>
-          </select>
-          <select v-model="newAssetForm.location_id" required>
-            <option :value="null" disabled>Standort wählen... *</option>
-            <option v-for="loc in locations" :key="loc.id" :value="loc.id">{{ loc.name }}</option>
-          </select>
-          <select v-model="newAssetForm.user_id">
-            <option :value="null">-- Keinem Benutzer zugewiesen --</option>
-            <option v-for="user in users" :key="user.id" :value="user.id">{{ user.display_name }}</option>
-          </select>
-          <input v-model.number="newAssetForm.purchase_price" type="number" step="0.01" placeholder="Kaufpreis" />
-          <label>Kaufdatum: <input v-model="newAssetForm.purchase_date" type="date" /></label>
-          <label>Garantie bis: <input v-model="newAssetForm.warranty_expiry" type="date" /></label>
-          <input v-model="newAssetForm.hostname" placeholder="Hostname" />
-          <input v-model="newAssetForm.ip_address" placeholder="IP-Adresse" />
-          <input v-model="newAssetForm.room" placeholder="Raum" />
-        </div>
-        <textarea v-model="newAssetForm.notes" placeholder="Notizen..."></textarea>
-        <div class="form-actions">
-          <button type="submit">{{ editingAsset ? 'Änderungen speichern' : 'Asset erstellen' }}</button>
-          <button v-if="editingAsset" @click="resetForm" type="button" class="cancel">Abbrechen</button>
-        </div>
-      </form>
-    </section>
+    
 
     <section class="card">
       <h2>Inventarliste</h2>
@@ -275,16 +225,23 @@ onMounted(async () => {
 </template>
 
 <style scoped>
-/* Der meiste Style bleibt unverändert */
 .inventory-container { display: flex; flex-direction: column; gap: 2rem; }
 .card { background-color: var(--card-bg); border-radius: 8px; padding: 1.5rem; box-shadow: none; border: 1px solid var(--color-border); }
-.form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem; margin-bottom: 1rem; }
-textarea { width: 100%; min-height: 80px; margin-bottom: 1rem; }
-.form-actions { display: flex; gap: 1rem; }
-input, select, textarea, button { padding: 0.75rem; border: 1px solid #ccc; border-radius: 4px; }
-button { cursor: pointer; border: none; font-weight: bold; color: white; }
-form button[type="submit"] { background-color: #42b883; }
-form button.cancel { background-color: #888; }
+.form-sections { display: flex; flex-direction: column; gap: 1.25rem; }
+.form-section { padding: 1rem; border: 1px solid var(--color-border); border-radius: 8px; background: var(--card-bg); }
+.section-title { margin: 0 0 0.75rem 0; font-size: 0.95rem; color: var(--text-muted); font-weight: 600; }
+.grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0.9rem; }
+.form-control { display: flex; flex-direction: column; gap: 0.35rem; }
+.form-control label { font-size: 0.9rem; color: var(--text-strong); }
+.form-control .hint { color: var(--text-muted); font-size: 0.8rem; }
+.req { color: #ef4444; margin-left: 0.2rem; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+input, select, textarea { padding: 0.7rem 0.75rem; background: var(--btn-bg); color: var(--text-strong); border: 1px solid var(--color-border); border-radius: 6px; }
+textarea { width: 100%; min-height: 100px; }
+.form-actions { display: flex; gap: 0.6rem; margin-top: 1rem; }
+button { cursor: pointer; border: 1px solid var(--color-border); background: var(--btn-bg); color: var(--text-strong); border-radius: 6px; padding: 0.6rem 0.9rem; }
+.btn-primary { background: var(--accent); border-color: var(--accent); color: white; }
+.btn.ghost { background: transparent; }
 table { width: 100%; border-collapse: collapse; }
 th, td { border-bottom: 1px solid var(--color-border); padding: 12px 15px; text-align: left; color: var(--text-strong); }
 th { background-color: var(--color-background-mute); font-weight: 600; color: var(--text-strong); }
