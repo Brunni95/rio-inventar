@@ -1,6 +1,6 @@
 # Datei: backend/app/crud/asset.py
 
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import or_
 from typing import Any, Dict, List, Union
 from pydantic import BaseModel
@@ -14,7 +14,19 @@ class CRUDAsset(CRUDBase[Asset, AssetCreate, AssetUpdate]):
     def get_multi_with_search(
             self, db: Session, *, skip: int = 0, limit: int = 100, search: str | None = None
     ) -> List[Asset]:
-        query = db.query(self.model).join(User, User.id == self.model.user_id, isouter=True)
+        # Eager Loading für verbundene Relationen, um N+1 zu vermeiden
+        query = (
+            db.query(self.model)
+            .options(
+                joinedload(Asset.asset_type),
+                joinedload(Asset.manufacturer),
+                joinedload(Asset.status),
+                joinedload(Asset.location),
+                joinedload(Asset.supplier),
+                joinedload(Asset.user),
+            )
+            .join(User, User.id == self.model.user_id, isouter=True)
+        )
         if search:
             search_term = f"%{search}%"
             query = query.filter(

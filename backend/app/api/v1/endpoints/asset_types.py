@@ -39,14 +39,13 @@ def delete_asset_type(asset_type_id: int, db: Session = Depends(get_db), current
     """
     Löscht einen asset_type.
     """
-    # KORREKTE PYTHON-SYNTAX: '!=' und ':'
-    if "AssetType" != "User":
-        asset_dependency = db.query(models.Asset).filter(getattr(models.Asset, 'asset_type_id') == asset_type_id).first()
-        if asset_dependency:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail=f"AssetType mit ID {asset_type_id} ist noch bei einem Asset in Verwendung und kann nicht gelöscht werden."
-            )
+    # Verhindere Löschen, wenn Assets auf diesen AssetType verweisen
+    asset_dependency = db.query(models.Asset).filter(models.Asset.asset_type_id == asset_type_id).first()
+    if asset_dependency:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"AssetType mit ID {asset_type_id} ist noch bei einem Asset in Verwendung und kann nicht gelöscht werden."
+        )
 
     db_item = crud.asset_type.remove(db=db, id=asset_type_id)
 

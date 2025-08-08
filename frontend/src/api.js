@@ -1,13 +1,14 @@
 // Datei: frontend/src/api.js
 
 import axios from 'axios';
-import { acquireToken } from './authService';
+import { acquireToken, logout } from './authService';
 
 // Erstelle eine neue axios-Instanz.
 // WICHTIG: Die baseURL sollte NUR die Adresse deines Backends sein, OHNE /api/v1.
 // Der Port (hier :8000) muss mit dem Port übereinstimmen, den dein Backend in docker-compose.yml verwendet.
+const apiBaseUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
 const apiClient = axios.create({
-  baseURL: 'http://localhost:8000',
+  baseURL: apiBaseUrl,
 });
 
 // Ein "Interceptor" ist eine Funktion, die bei jeder Anfrage ausgeführt wird,
@@ -29,6 +30,18 @@ apiClient.interceptors.request.use(
   (error) => {
     // Falls beim Erstellen der Anfrage ein Fehler auftritt.
     console.error('Fehler im Axios Request Interceptor:', error);
+    return Promise.reject(error);
+  }
+);
+
+// Antwort-Interceptor: Bei 401 ggf. ausloggen
+apiClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error?.response?.status === 401) {
+      // Token abgelaufen/ungültig → Benutzer abmelden
+      try { logout(); } catch (_) {}
+    }
     return Promise.reject(error);
   }
 );

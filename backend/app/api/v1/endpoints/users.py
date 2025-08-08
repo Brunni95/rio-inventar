@@ -39,14 +39,13 @@ def delete_user(user_id: int, db: Session = Depends(get_db), current_user: model
     """
     Löscht einen user.
     """
-    # KORREKTE PYTHON-SYNTAX: '!=' und ':'
-    if "User" != "User":
-        asset_dependency = db.query(models.Asset).filter(getattr(models.Asset, 'user_id') == user_id).first()
-        if asset_dependency:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail=f"User mit ID {user_id} ist noch bei einem Asset in Verwendung und kann nicht gelöscht werden."
-            )
+    # Verhindere Löschen, wenn dem Benutzer noch Assets zugewiesen sind
+    asset_dependency = db.query(models.Asset).filter(models.Asset.user_id == user_id).first()
+    if asset_dependency:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"User mit ID {user_id} ist noch bei einem Asset in Verwendung und kann nicht gelöscht werden."
+        )
 
     db_item = crud.user.remove(db=db, id=user_id)
 

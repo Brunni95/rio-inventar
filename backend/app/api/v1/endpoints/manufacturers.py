@@ -39,14 +39,13 @@ def delete_manufacturer(manufacturer_id: int, db: Session = Depends(get_db), cur
     """
     Löscht einen manufacturer.
     """
-    # KORREKTE PYTHON-SYNTAX: '!=' und ':'
-    if "Manufacturer" != "User":
-        asset_dependency = db.query(models.Asset).filter(getattr(models.Asset, 'manufacturer_id') == manufacturer_id).first()
-        if asset_dependency:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail=f"Manufacturer mit ID {manufacturer_id} ist noch bei einem Asset in Verwendung und kann nicht gelöscht werden."
-            )
+    # Verhindere Löschen, wenn Assets auf diesen Hersteller verweisen
+    asset_dependency = db.query(models.Asset).filter(models.Asset.manufacturer_id == manufacturer_id).first()
+    if asset_dependency:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Manufacturer mit ID {manufacturer_id} ist noch bei einem Asset in Verwendung und kann nicht gelöscht werden."
+        )
 
     db_item = crud.manufacturer.remove(db=db, id=manufacturer_id)
 

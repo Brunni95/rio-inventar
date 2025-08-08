@@ -39,14 +39,13 @@ def delete_location(location_id: int, db: Session = Depends(get_db), current_use
     """
     Löscht einen location.
     """
-    # KORREKTE PYTHON-SYNTAX: '!=' und ':'
-    if "Location" != "User":
-        asset_dependency = db.query(models.Asset).filter(getattr(models.Asset, 'location_id') == location_id).first()
-        if asset_dependency:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail=f"Location mit ID {location_id} ist noch bei einem Asset in Verwendung und kann nicht gelöscht werden."
-            )
+    # Verhindere Löschen, wenn Assets auf diese Location verweisen
+    asset_dependency = db.query(models.Asset).filter(models.Asset.location_id == location_id).first()
+    if asset_dependency:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Location mit ID {location_id} ist noch bei einem Asset in Verwendung und kann nicht gelöscht werden."
+        )
 
     db_item = crud.location.remove(db=db, id=location_id)
 

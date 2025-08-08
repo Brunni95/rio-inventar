@@ -39,14 +39,13 @@ def delete_status(status_id: int, db: Session = Depends(get_db), current_user: m
     """
     Löscht einen status.
     """
-    # KORREKTE PYTHON-SYNTAX: '!=' und ':'
-    if "Status" != "User":
-        asset_dependency = db.query(models.Asset).filter(getattr(models.Asset, 'status_id') == status_id).first()
-        if asset_dependency:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail=f"Status mit ID {status_id} ist noch bei einem Asset in Verwendung und kann nicht gelöscht werden."
-            )
+    # Verhindere Löschen, wenn Assets auf diesen Status verweisen
+    asset_dependency = db.query(models.Asset).filter(models.Asset.status_id == status_id).first()
+    if asset_dependency:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Status mit ID {status_id} ist noch bei einem Asset in Verwendung und kann nicht gelöscht werden."
+        )
 
     db_item = crud.status.remove(db=db, id=status_id)
 

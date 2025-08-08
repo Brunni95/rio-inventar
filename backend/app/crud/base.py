@@ -21,7 +21,8 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         self.model = model
 
     def get(self, db: Session, id: Any) -> Optional[ModelType]:
-        return db.query(self.model).filter(self.model.id == id).first()
+        # SQLAlchemy 2.0: nutze Session.get für Primärschlüssel-Lookups
+        return db.get(self.model, id)
 
     def get_multi(
             self, db: Session, *, skip: int = 0, limit: int = 100
@@ -39,33 +40,36 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         return db_obj
 
     def update(
-            self,
-            db: Session,
-            *,
-            db_obj: ModelType,
-            obj_in: Union[UpdateSchemaType, Dict[str, Any]]
+        self,
+        db: Session,
+        *,
+        db_obj: ModelType,
+        obj_in: Union[UpdateSchemaType, Dict[str, Any]]
     ) -> ModelType:
-        # Hole die Daten des bestehenden DB-Objekts als Dictionary
-        obj_data = db_obj.__dict__
-
+        # Nur explizit gesetzte Felder aktualisieren und primären Schlüssel ignorieren
         if isinstance(obj_in, dict):
             update_data = obj_in
         else:
-            # Konvertiere das Pydantic-Schema in ein Dictionary,
-            # schliesse dabei Felder aus, die nicht explizit gesetzt wurden.
             update_data = obj_in.model_dump(exclude_unset=True)
 
-        for field in obj_data:
-            if field in update_data:
-                setattr(db_obj, field, update_data[field])
+        # Verhindere versehentliches Überschreiben der Primärschlüssel-ID
+        update_data.pop("id", None)
+
+        for field_name, field_value in update_data.items():
+            # Setze nur existierende Attribute
+            if hasattr(db_obj, field_name):
+                setattr(db_obj, field_name, field_value)
 
         db.add(db_obj)
         db.commit()
         db.refresh(db_obj)
         return db_obj
 
-    def remove(self, db: Session, *, id: int) -> ModelType:
-        obj = db.query(self.model).get(id)
+    def remove(self, db: Session, *, id: int) -> Optional[ModelType]:
+        # SQLAlchemy 2.0: Session.get, None-handling
+        obj = db.get(self.model, id)
+        if obj is None:
+            return None
         db.delete(obj)
         db.commit()
         return obj

@@ -39,14 +39,13 @@ def delete_supplier(supplier_id: int, db: Session = Depends(get_db), current_use
     """
     Löscht einen supplier.
     """
-    # KORREKTE PYTHON-SYNTAX: '!=' und ':'
-    if "Supplier" != "User":
-        asset_dependency = db.query(models.Asset).filter(getattr(models.Asset, 'supplier_id') == supplier_id).first()
-        if asset_dependency:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail=f"Supplier mit ID {supplier_id} ist noch bei einem Asset in Verwendung und kann nicht gelöscht werden."
-            )
+    # Verhindere Löschen, wenn Assets auf diesen Lieferanten verweisen
+    asset_dependency = db.query(models.Asset).filter(models.Asset.supplier_id == supplier_id).first()
+    if asset_dependency:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Supplier mit ID {supplier_id} ist noch bei einem Asset in Verwendung und kann nicht gelöscht werden."
+        )
 
     db_item = crud.supplier.remove(db=db, id=supplier_id)
 
