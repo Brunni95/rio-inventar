@@ -1,7 +1,7 @@
 # Datei: backend/app/schemas/asset.py
 
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List
 from datetime import date
 
 # Importiere die Basis-Schemas der verknüpften Modelle
@@ -26,6 +26,7 @@ class AssetBase(BaseModel):
     ip_address: Optional[str] = None
     hostname: Optional[str] = None
     mac_address: Optional[str] = None
+    room: Optional[str] = None
     asset_type_id: int
     manufacturer_id: int
     status_id: int
@@ -51,6 +52,7 @@ class AssetUpdate(BaseModel):
     ip_address: Optional[str] = None
     hostname: Optional[str] = None
     mac_address: Optional[str] = None
+    room: Optional[str] = None
     asset_type_id: Optional[int] = None
     manufacturer_id: Optional[int] = None
     status_id: Optional[int] = None
@@ -70,3 +72,8 @@ class Asset(AssetBase):
 
     class Config:
         from_attributes = True
+
+
+class AssetList(BaseModel):
+    items: List[Asset]
+    total: int

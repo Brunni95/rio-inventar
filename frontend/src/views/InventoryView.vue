@@ -5,6 +5,7 @@ import { getAccount } from '../authService';
 
 // --- Refs für die Daten ---
 const assets = ref([]);
+const total = ref(0);
 const errorMessage = ref('');
 const editingAsset = ref(null);
 const locations = ref([]);
@@ -30,13 +31,14 @@ const newAssetForm = ref({
   inventory_number: '', serial_number: '', model: '', purchase_price: null,
   department: '', os_version: '', installation_date: null, warranty_expiry: null,
   purchase_date: null, notes: '', ip_address: '', hostname: '', mac_address: '',
-  asset_type_id: null, manufacturer_id: null, status_id: null, location_id: null,
+  room: '', asset_type_id: null, manufacturer_id: null, status_id: null, location_id: null,
   supplier_id: null, user_id: null,
 });
 
 watch(searchQuery, () => {
   clearTimeout(debounceTimer);
   debounceTimer = setTimeout(() => {
+    page.value = 1;
     fetchAssets();
   }, 300);
 });
@@ -51,14 +53,15 @@ const fetchAssets = async () => {
     params.append('skip', String((page.value - 1) * pageSize.value));
     params.append('limit', String(pageSize.value));
     const response = await api.get(`/api/v1/assets/?${params.toString()}`);
-    assets.value = response.data;
+    assets.value = response.data.items;
+    total.value = response.data.total;
   } catch (error) {
     errorMessage.value = 'Asset-Daten konnten nicht geladen werden.';
     console.error(error);
   }
 };
-const pagedAssets = () => assets.value; // jetzt serverseitig paginiert
-const totalPages = () => page.value + (assets.value.length < pageSize.value ? 0 : 1); // einfache Abschätzung
+const pagedAssets = () => assets.value; // serverseitig paginiert
+const totalPages = () => Math.max(1, Math.ceil(total.value / pageSize.value));
 
 const getValue = (obj, path) => {
   return path.split('.').reduce((acc, key) => (acc ? acc[key] : undefined), obj);
@@ -76,7 +79,10 @@ const changeSort = (key) => {
 };
 
 const goToPage = (p) => {
-  if (p < 1) return;
+  const tp = totalPages();
+  if (p < 1) p = 1;
+  if (p > tp) p = tp;
+  if (p === page.value) return;
   page.value = p;
   fetchAssets();
 };
@@ -162,6 +168,7 @@ const startEdit = (asset) => {
     location_id: asset.location.id,
     supplier_id: asset.supplier?.id,
     user_id: asset.user?.id,
+    room: asset.room || '',
   };
 };
 
@@ -170,7 +177,7 @@ const resetForm = () => {
   newAssetForm.value = {
     inventory_number: '', serial_number: '', model: '', purchase_price: null,
     department: '', os_version: '', installation_date: null, warranty_expiry: null,
-    purchase_date: null, notes: '', ip_address: '', hostname: '', mac_address: '',
+    purchase_date: null, notes: '', ip_address: '', hostname: '', mac_address: '', room: '',
     asset_type_id: null, manufacturer_id: null, status_id: null, location_id: null,
     supplier_id: null, user_id: null,
   };
@@ -219,6 +226,7 @@ onMounted(async () => {
           <label>Garantie bis: <input v-model="newAssetForm.warranty_expiry" type="date" /></label>
           <input v-model="newAssetForm.hostname" placeholder="Hostname" />
           <input v-model="newAssetForm.ip_address" placeholder="IP-Adresse" />
+          <input v-model="newAssetForm.room" placeholder="Raum" />
         </div>
         <textarea v-model="newAssetForm.notes" placeholder="Notizen..."></textarea>
         <div class="form-actions">
@@ -268,10 +276,20 @@ onMounted(async () => {
         </tbody>
       </table>
       <p v-else>Keine Assets gefunden.</p>
-      <div class="pagination" v-if="assets.length > pageSize">
-        <button :disabled="page===1" @click="goToPage(page-1)">«</button>
-        <span>Seite {{ page }} / {{ totalPages() }}</span>
-        <button :disabled="page===totalPages()" @click="goToPage(page+1)">»</button>
+      <div class="pagination" v-if="total > pageSize">
+        <button type="button" :disabled="page===1" @click="goToPage(1)">« Erste</button>
+        <button type="button" :disabled="page===1" @click="goToPage(page-1)">‹ Zurück</button>
+        <span>Seite {{ page }} / {{ totalPages() }} ({{ total }} Einträge)</span>
+        <button type="button" :disabled="page===totalPages()" @click="goToPage(page+1)">Weiter ›</button>
+        <button type="button" :disabled="page===totalPages()" @click="goToPage(totalPages())">Letzte »</button>
+        <label class="page-size">
+          Pro Seite:
+          <select v-model.number="pageSize" @change="page=1; fetchAssets()">
+            <option :value="10">10</option>
+            <option :value="25">25</option>
+            <option :value="50">50</option>
+          </select>
+        </label>
       </div>
     </section>
 
@@ -318,6 +336,9 @@ th { background-color: var(--color-background-mute); font-weight: 600; color: va
 .toolbar input { flex: 1; padding: 0.75rem; border: 1px solid #ccc; border-radius: 4px; }
 .toolbar-actions { display: flex; gap: 0.5rem; }
 .pagination { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.75rem; }
+.pagination button { background: var(--btn-bg); color: var(--text-strong); border: 1px solid var(--color-border); border-radius: 6px; padding: 0.4rem 0.6rem; }
+.pagination button:disabled { opacity: 0.5; cursor: not-allowed; }
+.pagination .page-size select { background: var(--btn-bg); color: var(--text-strong); border: 1px solid var(--color-border); border-radius: 6px; padding: 0.2rem 0.4rem; }
 
 /* --- NEU: Styles für das Modal --- */
 .modal-overlay {

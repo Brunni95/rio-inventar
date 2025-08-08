@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from app import crud, schemas, models
 from app.db.session import SessionLocal
 from datetime import date
+import random
 
 def seed_db():
     db: Session = SessionLocal()
@@ -100,6 +101,49 @@ def seed_db():
 
     # Ausgemustertes Asset
     crud.asset.create_with_log(db=db, obj_in=schemas.AssetCreate(inventory_number="IT-LAP-OLD-099", model="MacBook Pro 2018", purchase_price=2800.00, serial_number="SN-APPLE-OLD", purchase_date=date(2018, 7, 15), asset_type_id=typ_notebook.id, manufacturer_id=apple.id, status_id=status_ausgemustert.id, location_id=location_lager.id, supplier_id=lieferant_apple.id, user_id=None), user_id=user_lars.id)
+
+    # --- Zusätzliche Bulk-Daten für Pagination-Tests ---
+    print("5. Seeding bulk assets for pagination...")
+    bulk_count = 150
+    asset_types = [typ_notebook, typ_monitor, typ_maus, typ_dock, typ_keyboard]
+    manufacturers = [dell, apple, logitech, hp]
+    statuses = [status_lager, status_betrieb, status_reparatur]
+    locations = [location_zh, location_be, location_lager]
+    users_list = [user_lars, user_martina, user_peter, None]
+
+    # Finde die nächste laufende Nummer für Inventarnummern
+    start_index = 1000
+    for i in range(bulk_count):
+        idx = start_index + i
+        at = random.choice(asset_types)
+        man = random.choice(manufacturers)
+        st = random.choice(statuses)
+        loc = random.choice(locations)
+        usr = random.choice(users_list)
+        inv = f"IT-BULK-{idx:04d}"
+        serial = f"SN-BULK-{idx:06d}"
+        price = round(random.uniform(80, 3200), 2)
+        model = (
+            "Latitude" if man is dell else
+            "MacBook" if man is apple else
+            "MX" if man is logitech else
+            "EliteBook"
+        ) + f" {random.randint(1, 999)}"
+
+        asset_in = schemas.AssetCreate(
+            inventory_number=inv,
+            serial_number=serial,
+            model=model,
+            purchase_price=price,
+            purchase_date=date(2023, random.randint(1, 12), random.randint(1, 28)),
+            asset_type_id=at.id,
+            manufacturer_id=man.id,
+            status_id=st.id,
+            location_id=loc.id,
+            supplier_id=lieferant_td.id,
+            user_id=(usr.id if usr else None),
+        )
+        crud.asset.create_with_log(db=db, obj_in=asset_in, user_id=user_lars.id)
 
     db.close()
     print("--- DATABASE SEEDING COMPLETE ---")

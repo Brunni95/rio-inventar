@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status, Response # <-- HIER IST DIE KORREKTUR
 from sqlalchemy.orm import Session
-from typing import List, Optional
+from typing import Optional, List
 
 from app import crud, models, schemas
 from app.auth import get_current_active_user
@@ -11,7 +11,7 @@ from app.db.session import get_db
 router = APIRouter()
 
 
-@router.get("/", response_model=List[schemas.Asset])
+@router.get("/", response_model=schemas.AssetList)
 def read_assets(
         db: Session = Depends(get_db),
         skip: int = 0,
@@ -24,7 +24,7 @@ def read_assets(
     """
     Ruft eine Liste von Assets ab, mit optionaler Suche.
     """
-    assets = crud.asset.get_multi_with_search(
+    items = crud.asset.get_multi_with_search(
         db,
         skip=skip,
         limit=limit,
@@ -32,7 +32,8 @@ def read_assets(
         order_by=order_by or "id",
         order_dir=order_dir or "desc",
     )
-    return assets
+    total = crud.asset.count_with_search(db, search=search)
+    return {"items": items, "total": total}
 
 
 @router.post("/", response_model=schemas.Asset, status_code=status.HTTP_201_CREATED)

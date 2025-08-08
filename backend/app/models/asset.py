@@ -19,16 +19,17 @@ class Asset(Base):
     ip_address = Column(String)
     hostname = Column(String)
     mac_address = Column(String)
+    room = Column(String)  # NEU: Raum/Zimmer
 
     # --- Beziehungen (Foreign Keys) ---
-    user_id = Column(Integer, ForeignKey("users.id")) # GEÄNDERT: von assigned_to zu user_id
+    user_id = Column(Integer, ForeignKey("users.id")) # GEï¿½NDERT: von assigned_to zu user_id
     asset_type_id = Column(Integer, ForeignKey("asset_types.id"))
     manufacturer_id = Column(Integer, ForeignKey("manufacturers.id"))
     status_id = Column(Integer, ForeignKey("statuses.id"))
     location_id = Column(Integer, ForeignKey("locations.id"))
     supplier_id = Column(Integer, ForeignKey("suppliers.id"))
 
-    # --- Navigation Properties für einfachen Zugriff ---
+    # --- Navigation Properties fï¿½r einfachen Zugriff ---
     user = relationship("User") # NEU
     asset_type = relationship("AssetType")
     manufacturer = relationship("Manufacturer")

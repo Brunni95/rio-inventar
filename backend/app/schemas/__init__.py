@@ -12,5 +12,5 @@ from .supplier import Supplier, SupplierCreate, SupplierUpdate
 from .user import User, UserCreate, UserUpdate
 
 from .asset_type import AssetType, AssetTypeCreate, AssetTypeUpdate
-from .asset import Asset, AssetCreate, AssetUpdate
+from .asset import Asset, AssetCreate, AssetUpdate, AssetList
 from .asset_log import AssetLog, AssetLogCreate, AssetLogUpdate
